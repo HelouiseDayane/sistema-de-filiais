@@ -6,8 +6,9 @@ import { UsersManagement } from './UsersManagement';
 import { BranchesManagement } from './BranchesManagement';
 import { BankDataSettings } from './BankDataSettings';
 import { useApp } from '../../App';
+import { MyAccountSettings } from './MyAccountSettings';
 
-type SettingsSection = 'menu' | 'store' | 'users' | 'branches' | 'bank';
+ type SettingsSection = 'menu' | 'store' | 'users' | 'branches' | 'bank' | 'myaccount';
 
 export function Settings() {
   const { admin } = useApp();
@@ -37,6 +38,14 @@ export function Settings() {
   }
 
   const allSections = [
+    {
+      id: 'myaccount' as const,
+      title: 'Minha Conta',
+      description: 'Edite seu email e senha',
+      icon: Users,
+      color: 'bg-gray-500',
+      roles: ['master', 'admin', 'employee'] as const,
+    },
     {
       id: 'store' as const,
       title: 'Configurações da Loja',
@@ -159,6 +168,7 @@ export function Settings() {
 
       {/* Conteúdo */}
       <div className="mt-6">
+        {sectionMounted && activeSection === 'myaccount' && <MyAccountSettings key="myaccount" />}
         {sectionMounted && activeSection === 'store' && <StoreSettings key="store" onBack={() => setActiveSection('menu')} />}
         {sectionMounted && activeSection === 'users' && <UsersManagement key="users" onBack={() => setActiveSection('menu')} />}
         {sectionMounted && activeSection === 'branches' && <BranchesManagement key="branches" onBack={() => setActiveSection('menu')} />}
@@ -166,6 +176,7 @@ export function Settings() {
 
         {!sectionMounted && <div className="p-6">Carregando...</div>}
       </div>
+  
     </div>
   );
 }

@@ -105,6 +105,11 @@ echo -e "${BLUE}ℹ Corrigindo permissões...${NC}"
 docker compose exec -T backend chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache 2>/dev/null || true
 docker compose exec -T backend chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache 2>/dev/null || true
 
+
+# Executar scheduler Laravel
+echo -e "${BLUE}ℹ Iniciando scheduler Laravel...${NC}"
+docker-compose exec queue php artisan schedule:run &
+
 # Limpar cache
 echo -e "${BLUE}ℹ Limpando cache...${NC}"
 docker compose exec -T backend php artisan config:clear 2>/dev/null || true
@@ -208,7 +213,7 @@ else
 fi
 
 echo -n "9. Frontend Dev - Porta 8888 (Cloudflare): "
-if curl -k -s -o /dev/null -w "%{http_code}" https://localhost:8888 2>/dev/null | grep -qE "200|404|302"; then
+if curl -k -s -o /dev/null -w "%{http_code}" https://localhost:8889 2>/dev/null | grep -qE "200|404|302"; then
   echo -e "${GREEN}✓ Acessível${NC}"
 else
   echo -e "${RED}✗ Inacessível${NC}"

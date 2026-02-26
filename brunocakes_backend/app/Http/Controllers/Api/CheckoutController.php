@@ -935,20 +935,17 @@ class CheckoutController extends Controller
     public function getLastOrderCustomer(Request $request)
     {
         $phone = $request->input('phone');
-        
         if (!$phone) {
             return response()->json(['message' => 'Telefone é obrigatório'], 400);
         }
-        
-        $lastOrder = Order::where('customer_phone', $phone)
+        $cleanPhone = preg_replace('/\D/', '', $phone);
+        $lastOrder = Order::whereRaw("REPLACE(REPLACE(REPLACE(REPLACE(customer_phone, '+', ''), '-', ''), '(', ''), ')', '') LIKE ?", ['%' . $cleanPhone])
             ->with('items')
             ->orderBy('created_at', 'desc')
             ->first();
-            
         if (!$lastOrder) {
             return response()->json(['message' => 'Nenhum pedido encontrado'], 404);
         }
-        
         return response()->json($lastOrder);
     }
 

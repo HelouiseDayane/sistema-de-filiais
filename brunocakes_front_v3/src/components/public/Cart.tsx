@@ -14,6 +14,7 @@ import { Branch } from '../../types/admin';
 
 export function Cart() {
   const { cart, updateCartQuantity, removeFromCart, clearCart } = useApp();
+  const { currentStatus, clearAllExpirationItems, CART_EXPIRATION_MINUTES } = useCartExpiration();
 
   // Limpa carrinho ao receber expiração via SSE
   useEffect(() => {
@@ -32,7 +33,6 @@ export function Cart() {
       clearCart();
     }
   }, [currentStatus, cart.length, clearCart]);
-  const { currentStatus, clearAllExpirationItems, CART_EXPIRATION_MINUTES } = useCartExpiration();
   const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null);
   const [branchData, setBranchData] = useState<any>(null);
 

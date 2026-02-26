@@ -219,7 +219,7 @@ export const Checkout = () => {
     setIsSearchingCustomer(true);
     try {
       // Enviar apenas os dígitos do telefone
-      const contactToSend = customerContact; // já está formatado
+      const contactToSend = customerContact.replace(/\D/g, '');
       const response = await api.getCustomerLastOrder(contactToSend);
       if (response && response.customer_name) {
         // Salva os dados encontrados para confirmação
@@ -277,17 +277,25 @@ export const Checkout = () => {
 
 
   const handleSubmit = async (e: React.FormEvent) => {
+
     e.preventDefault();
 
+    // Atualizar produtos antes de validar estoque
+    await refreshProducts();
 
-    if (cart.length === 0) {
-      toast.error('Seu carrinho está vazio');
+    // Remover itens sem estoque do carrinho
+    const outOfStockItems = cart.filter(item => getAvailableStock(item.product.id) === 0);
+    if (outOfStockItems.length > 0) {
+      outOfStockItems.forEach(item => {
+        toast.error(`Produto sem estoque removido: ${item.name}`);
+      });
+      clearCart();
+      toast.error('Um ou mais itens do seu carrinho estavam sem estoque e foram removidos. Adicione novamente para finalizar o pedido.');
       return;
     }
 
-    // Validação: impedir finalizar se algum item está sem estoque
-    if (hasOutOfStock) {
-      toast.error('Um ou mais itens do seu carrinho estão sem estoque. Remova-os para finalizar o pedido.');
+    if (cart.length === 0) {
+      toast.error('Seu carrinho está vazio');
       return;
     }
 
