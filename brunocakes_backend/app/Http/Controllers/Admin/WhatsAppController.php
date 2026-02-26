@@ -73,11 +73,6 @@ class WhatsAppController extends Controller
             }
             if (!$alreadyExists) {
                 // Log removido
-                    'instance' => $instanceName,
-                    'error' => $result['error'],
-                    'body' => isset($result['body']) ? $result['body'] : null,
-                    'full_result' => $result
-                ]);
                 return response()->json([
                     'message' => 'Erro ao criar/editar instância',
                     'error' => $result['error'],
