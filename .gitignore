@@ -1,1 +1,55 @@
+# Docker Compose e arquivos sensíveis
+docker-compose.yml
+docker-compose.*.yml
+docker-compose.ENV
+brunocakes_backend/config/*.php
+brunocakes_backend/config/*.yml
+brunocakes_backend/config/*.json
+
+# Paginas e arquivos do backend que podem conter chaves
+brunocakes_backend/app/Http/Controllers/**/*.php
+!brunocakes_backend/app/Http/Controllers/**/*.example.php
 node_modules
+
+# Arquivos de ambiente e variáveis sensíveis
+.env
+*.env
+*.env.*
+!env.example
+
+# Configurações de banco de dados
+brunocakes_backend.ENV
+docker-compose.ENV
+brunocakes_backend/.env
+brunocakes_backend/.env.*
+brunocakes_backend/config/database.php
+brunocakes_backend/config/*.env
+
+# Chaves e credenciais
+*.key
+*.pem
+*.crt
+*.p12
+*.jks
+*.keystore
+*.pfx
+*.cert
+*.csr
+*.gpg
+*.asc
+
+# Arquivos de backup e restore
+backup.sh
+restore.sh
+
+# Outros arquivos sensíveis
+brunocakes_backend/storage/*.key
+brunocakes_backend/storage/*.pem
+brunocakes_backend/storage/*.env
+brunocakes_backend/storage/logs/*.log
+
+# Evitar versionar arquivos de configuração customizados
+docker/*.env
+docker/*.key
+docker/*.pem
+docker/*.crt

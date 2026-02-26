@@ -104,6 +104,9 @@ class BranchController extends Controller
             'opening_hours' => 'nullable|string',
             'is_open' => 'boolean',
             'is_active' => 'boolean',
+            'pix_key' => 'nullable|string|max:255',
+            'payment_frequency' => 'nullable|in:quinzenal,mensal,trimestral',
+            'profit_percentage' => 'nullable|numeric|min:0|max:100',
         ]);
 
         if ($validator->fails()) {

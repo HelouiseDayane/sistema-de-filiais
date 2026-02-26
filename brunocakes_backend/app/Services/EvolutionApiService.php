@@ -80,6 +80,8 @@ class EvolutionApiService
             return [
                 'success' => false,
                 'error' => $errorMessage,
+                'body' => $response->body(),
+                'json' => $response->json(),
             ];
         } catch (\Exception $e) {
             Log::error('Erro ao criar instância Evolution API: ' . $e->getMessage(), [
@@ -88,6 +90,9 @@ class EvolutionApiService
             ]);
             return [
                 'success' => false,
+                'error' => $e->getMessage(),
+                'body' => null,
+                'json' => null,
                 'error' => $e->getMessage(),
             ];
         }

@@ -50,12 +50,13 @@ export function WhatsAppConnection({ branchId: initialBranchId, branchName: init
     }
   };
 
+  // Verifica status automaticamente ao montar ou trocar de filial
   useEffect(() => {
-    // Só verificar status ao conectar, sem polling
     if (!selectedBranchId || selectedBranchId === null || selectedBranchId === undefined) {
       return;
     }
-    // Não faz polling automático
+    checkStatus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedBranchId]);
 
   // Timer do QR Code
@@ -63,7 +64,7 @@ export function WhatsAppConnection({ branchId: initialBranchId, branchName: init
     if (showQrDialog && qrCode && status !== 'connected') {
       // Resetar timer
       setQrCodeTimer(30);
-      
+
       // Countdown de 1 em 1 segundo
       const countdownInterval = setInterval(() => {
         setQrCodeTimer((prev) => {
@@ -77,9 +78,9 @@ export function WhatsAppConnection({ branchId: initialBranchId, branchName: init
           return prev - 1;
         });
       }, 1000);
-      
+
       setQrCodeTimerInterval(countdownInterval);
-      
+
       return () => {
         if (countdownInterval) clearInterval(countdownInterval);
       };
@@ -90,17 +91,21 @@ export function WhatsAppConnection({ branchId: initialBranchId, branchName: init
       }
       setQrCodeTimer(30);
     }
-  }, [showQrDialog, qrCode]);
+    // Adiciona status como dependência para evitar erro de comparação de tipos
+  }, [showQrDialog, qrCode, status]);
 
   useEffect(() => {
     if (!selectedBranchId) return;
     if (!lastEvent) return;
-    // Corrige comparação: branch_id pode ser string ou number
-    const eventBranchId = typeof lastEvent.data.branch_id === 'string' ? Number(lastEvent.data.branch_id) : lastEvent.data.branch_id;
-    if (lastEvent.type === 'whatsapp_status' && eventBranchId === selectedBranchId) {
-      setStatus(lastEvent.data.status as 'disconnected' | 'connecting' | 'connected');
-      setWhatsappNumber(lastEvent.data.number || null);
-      setConnectedAt(lastEvent.data.connected_at || null);
+    // Só processa eventos do tipo whatsapp_status e que tenham branch_id
+    if (lastEvent.type === 'whatsapp_status' && (lastEvent.data as any)?.branch_id !== undefined) {
+      const branchIdValue = (lastEvent.data as any).branch_id;
+      const eventBranchId = typeof branchIdValue === 'string' ? Number(branchIdValue) : branchIdValue;
+      if (eventBranchId === selectedBranchId) {
+        setStatus((lastEvent.data as any).status as 'disconnected' | 'connecting' | 'connected');
+        setWhatsappNumber((lastEvent.data as any).number || null);
+        setConnectedAt((lastEvent.data as any).connected_at || null);
+      }
     }
   }, [lastEvent, selectedBranchId]);
 
@@ -223,11 +228,10 @@ export function WhatsAppConnection({ branchId: initialBranchId, branchName: init
 
   const refreshQrCode = async () => {
     if (!selectedBranchId) return;
-    
-    // Verificar status primeiro
+
     try {
       const statusResponse = await adminApiRequest(`/admin/whatsapp/status/${selectedBranchId}`);
-      
+
       // Se já está conectado, não precisa atualizar QR Code
       if (statusResponse.status === 'connected') {
         toast.success('WhatsApp já está conectado!');
@@ -237,14 +241,32 @@ export function WhatsAppConnection({ branchId: initialBranchId, branchName: init
         setConnectedAt(statusResponse.connected_at);
         return;
       }
-      
+
       // Se não conectou ainda, atualizar QR Code
       const response = await adminApiRequest(`/admin/whatsapp/refresh-qr/${selectedBranchId}`);
+
+      // Novo tratamento: se backend responder que já está conectado
+      if (response.status === 'connected' || response.message?.includes('já está conectado')) {
+        toast.success('WhatsApp já está conectado!');
+        setShowQrDialog(false);
+        setStatus('connected');
+        // Opcional: atualizar número se vier na resposta
+        if (response.number) setWhatsappNumber(response.number);
+        if (response.connected_at) setConnectedAt(response.connected_at);
+        return;
+      }
+
       setQrCode(response.qrcode);
       toast.success('QR Code atualizado');
     } catch (error: any) {
       console.error('Erro ao atualizar QR Code:', error);
       toast.error('Erro ao atualizar QR Code');
+      // Se erro for de já conectado, tratar também
+      if (error?.message?.includes('já está conectado')) {
+        toast.success('WhatsApp já está conectado!');
+        setShowQrDialog(false);
+        setStatus('connected');
+      }
     }
   };
 

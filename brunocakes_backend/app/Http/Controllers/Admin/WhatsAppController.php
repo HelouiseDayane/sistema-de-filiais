@@ -41,73 +41,80 @@ class WhatsAppController extends Controller
 
         $branch = Branch::findOrFail($branchId);
 
-    // Salvar nome da instância como 'whatsapp_filial_{id}' para evitar conflitos e garantir unicidade
-    $instanceName = 'whatsapp_filial_' . $branch->id;
+    // Usar nome da filial como nome da instância (slug)
+    // Usar nome da filial como nome da instância (slug)
+    $instanceName = \Illuminate\Support\Str::slug($branch->name, '_');
+    if (empty($instanceName)) {
+        $instanceName = 'filial_' . $branch->id;
+    }
 
-        // Se já existe instância, verificar estado
-        if ($branch->whatsapp_instance_name) {
-            // Verificar estado atual
-            $state = $this->evolutionApi->connectionState($instanceName);
-            
-            if ($state['success'] && $state['state'] === 'open') {
-                return response()->json([
-                    'message' => 'WhatsApp já está conectado',
-                    'status' => 'connected',
-                    'number' => $branch->whatsapp_number,
-                ]);
-            }
-            
-            // Se não está conectada mas existe, deletar e recriar
-            $this->evolutionApi->deleteInstance($instanceName);
-        }
-        
-        // Criar ou recriar instância
-        // Usar URL pública para webhook (Evolution API precisa acessar de fora do Docker)
         $webhookUrl = 'https://brunocake.zapsrv.com/api/webhooks/evolution/' . $branch->id;
-        
-        $result = $this->evolutionApi->createInstance($instanceName, $webhookUrl);
-
-        if (!$result['success']) {
-            return response()->json([
-                'message' => 'Erro ao criar instância',
-                'error' => $result['error'],
-            ], 500);
+        if ($branch->whatsapp_instance_name) {
+            // Log removido
+        } else {
+            // Log removido
         }
-
-        // Salvar nome da instância SEMPRE (mesmo que o QR Code ainda não esteja pronto)
+        $result = $this->evolutionApi->createInstance($instanceName, $webhookUrl);
+        // Se o erro for 'already in use', tratar como sucesso (instância já existe)
+        if (!$result['success']) {
+            $alreadyExists = false;
+            $body = null;
+            if (isset($result['body'])) {
+                $body = $result['body'];
+                if (is_string($body)) {
+                    $body = json_decode($body, true);
+                }
+            }
+            if (
+                is_array($body) && isset($body['response']['message'][0]) &&
+                (str_contains($body['response']['message'][0], 'already in use') || str_contains($body['response']['message'][0], 'is already in use'))
+            ) {
+                $alreadyExists = true;
+            }
+            if (!$alreadyExists) {
+                // Log removido
+                    'instance' => $instanceName,
+                    'error' => $result['error'],
+                    'body' => isset($result['body']) ? $result['body'] : null,
+                    'full_result' => $result
+                ]);
+                return response()->json([
+                    'message' => 'Erro ao criar/editar instância',
+                    'error' => $result['error'],
+                ], 500);
+            } else {
+                // Log removido
+            }
+        }
         $branch->update([
             'whatsapp_instance_name' => $instanceName,
             'whatsapp_status' => 'connecting',
         ]);
 
         // Tentar obter QR Code (com retry pois pode demorar alguns segundos)
-        // Na Evolution API v2.3.6, o QR Code pode demorar para ser gerado
+        // Log removido
         $qrCode = null;
-        $maxRetries = 15; // Aumentado para 15 tentativas
-        
+        $maxRetries = 15;
         for ($i = 0; $i < $maxRetries; $i++) {
             if ($i > 0) {
-                sleep(2); // Aguardar 2 segundos entre tentativas  
+                sleep(2);
             }
-            
             $qrCode = $this->evolutionApi->fetchQrCode($instanceName);
-            
             if ($qrCode['success'] && !empty($qrCode['qrcode'])) {
+                // Log removido
                 break;
             }
         }
-
-        // Se ainda não tiver QR Code, retornar mensagem para tentar novamente
         if (!$qrCode || !$qrCode['success'] || empty($qrCode['qrcode'])) {
+            // Log removido
             return response()->json([
                 'message' => 'Instância criada. O QR Code está sendo gerado, por favor aguarde alguns segundos e clique em "Atualizar Status"',
                 'error' => 'QR Code ainda não disponível',
                 'instance_name' => $instanceName,
                 'status' => 'connecting',
                 'retry' => true,
-            ], 202); // 202 Accepted - processando
+            ], 202);
         }
-
         return response()->json([
             'message' => 'QR Code gerado com sucesso',
             'qrcode' => $qrCode['qrcode'],
@@ -189,21 +196,15 @@ class WhatsAppController extends Controller
         $state = $this->evolutionApi->connectionState($branch->whatsapp_instance_name);
 
         // Log completo do estado para debug
-        \Log::info('WhatsApp Status Check', [
-            'branch_id' => $branchId,
-            'instance_name' => $branch->whatsapp_instance_name,
-            'state_response' => $state,
-        ]);
+        // Log removido
 
         // Se houve erro na comunicação com a API, retornar status atual do banco
         if (!$state['success']) {
-            \Log::warning('Erro ao consultar Evolution API, retornando status do banco', [
-                'branch_id' => $branchId,
-                'error' => $state['error'] ?? 'Unknown',
-            ]);
-            
+            // Log removido
+            // Prioriza status salvo no banco, não sobrescreve para 'disconnected' se já estava 'connected'
+            $statusBanco = $branch->whatsapp_status ?? 'disconnected';
             return response()->json([
-                'status' => $branch->whatsapp_status ?? 'disconnected',
+                'status' => $statusBanco,
                 'number' => $branch->whatsapp_number,
                 'connected_at' => $branch->whatsapp_connected_at,
                 'instance_name' => $branch->whatsapp_instance_name,
@@ -221,45 +222,32 @@ class WhatsAppController extends Controller
         // Atualizar banco de dados sempre que conectado
         if ($status === 'connected') {
             $updateData = ['whatsapp_status' => $status];
-            
             // Sempre atualizar connected_at quando conectado
             if (!$branch->whatsapp_connected_at) {
                 $updateData['whatsapp_connected_at'] = now();
             }
-            
-            // Tentar extrair número de várias formas
+            // Extrair número do owner, nunca sobrescrever whatsapp_instance_name
             $phoneNumber = null;
             if (isset($state['instance']['owner'])) {
                 $phoneNumber = $state['instance']['owner'];
-            } elseif (isset($state['instance']['instanceName'])) {
-                // Se o nome da instância for o número
-                $phoneNumber = $state['instance']['instanceName'];
             }
-            
             // Limpar formato do número (remover @s.whatsapp.net se tiver)
             if ($phoneNumber && str_contains($phoneNumber, '@')) {
                 $phoneNumber = explode('@', $phoneNumber)[0];
             }
-            
             if ($phoneNumber && $phoneNumber !== $branch->whatsapp_number) {
                 $updateData['whatsapp_number'] = $phoneNumber;
             }
-
+            // Nunca sobrescrever whatsapp_instance_name, sempre manter nome da filial
             $branch->update($updateData);
-            
-            \Log::info('WhatsApp status updated to connected', [
-                'branch_id' => $branchId,
-                'number' => $phoneNumber,
-            ]);
+            // Log removido
         } elseif ($status !== $branch->whatsapp_status) {
             // Atualizar apenas status se mudou
             $updateData = ['whatsapp_status' => $status];
-            
             // Se desconectou, limpar dados
             if ($status === 'disconnected') {
                 $updateData['whatsapp_connected_at'] = null;
             }
-
             $branch->update($updateData);
         }
 
@@ -355,7 +343,20 @@ class WhatsAppController extends Controller
 
         $qrCode = $this->evolutionApi->fetchQrCode($branch->whatsapp_instance_name);
 
+        // Se já está conectado, retornar mensagem amigável
         if (!$qrCode['success']) {
+            // Tenta checar status da instância
+            $state = $this->evolutionApi->connectionState($branch->whatsapp_instance_name);
+            $isConnected = false;
+            if ($state['success'] && ($state['state'] === 'open' || $state['state'] === 'connected')) {
+                $isConnected = true;
+            }
+            if ($isConnected) {
+                return response()->json([
+                    'message' => 'WhatsApp já está conectado, não é necessário novo QR Code.',
+                    'status' => 'connected',
+                ], 200);
+            }
             return response()->json([
                 'message' => 'Erro ao gerar QR Code',
                 'error' => $qrCode['error'],

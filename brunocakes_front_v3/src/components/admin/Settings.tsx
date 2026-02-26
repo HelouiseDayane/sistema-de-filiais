@@ -24,19 +24,7 @@ export function Settings() {
     };
   }, []);
 
-  useEffect(() => {
-    // Reset section mount state when changing sections
-    setSectionMounted(false);
-    const timer = setTimeout(() => {
-      setSectionMounted(true);
-    }, 10);
-    return () => clearTimeout(timer);
-  }, [activeSection]);
-
-  if (!mounted) {
-    return <div className="p-6">Carregando...</div>;
-  }
-
+  // Definir allSections antes do uso
   const allSections = [
     {
       id: 'myaccount' as const,
@@ -70,7 +58,6 @@ export function Settings() {
       color: 'bg-orange-500',
       roles: ['master', 'admin'] as const,
     },
-
     {
       id: 'users' as const,
       title: 'Usuários',
@@ -85,6 +72,19 @@ export function Settings() {
   const sections = allSections.filter(section => 
     section.roles.includes(admin?.role as any)
   );
+
+  // Controlar montagem da seção interna
+  useEffect(() => {
+    if (activeSection === 'menu') {
+      setSectionMounted(false);
+    } else {
+      setSectionMounted(false);
+      const timer = setTimeout(() => {
+        setSectionMounted(true);
+      }, 10);
+      return () => clearTimeout(timer);
+    }
+  }, [activeSection]);
 
   // Menu principal
   if (activeSection === 'menu') {
@@ -134,7 +134,6 @@ export function Settings() {
 
   // Seções internas
   const currentSection = sections.find(s => s.id === activeSection);
-  
   if (!currentSection) {
     return <div className="p-6">Erro ao carregar seção</div>;
   }
@@ -155,15 +154,26 @@ export function Settings() {
         <span className="font-medium">{currentSection.title}</span>
       </div>
 
-      {/* Header */}
+
+      {/* Header com botão voltar ao lado do título */}
       <div className="flex items-center gap-4">
         <div className={`w-14 h-14 rounded-xl ${currentSection.color} flex items-center justify-center`}>
           <Icon className="w-7 h-7 text-white" />
         </div>
-        <div>
+        <div className="flex items-center gap-2">
           <h1 className="text-3xl font-bold">{currentSection.title}</h1>
-          <p className="text-muted-foreground">{currentSection.description}</p>
+          <button
+            onClick={() => setActiveSection('menu')}
+            className="flex items-center gap-2 px-3 py-1 rounded-md bg-muted hover:bg-accent text-sm font-medium text-muted-foreground hover:text-foreground transition-colors border border-border shadow-sm ml-2"
+            style={{ minWidth: 0 }}
+          >
+            <ChevronRight className="w-4 h-4 rotate-180" />
+            Voltar
+          </button>
         </div>
+      </div>
+      <div className="ml-[4.5rem]">
+        <p className="text-muted-foreground">{currentSection.description}</p>
       </div>
 
       {/* Conteúdo */}
@@ -176,7 +186,6 @@ export function Settings() {
 
         {!sectionMounted && <div className="p-6">Carregando...</div>}
       </div>
-  
     </div>
   );
 }

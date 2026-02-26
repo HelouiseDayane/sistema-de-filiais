@@ -11,11 +11,20 @@ use App\Http\Controllers\Admin\OrderAdminController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\BranchController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\BranchPaymentController;
+use App\Http\Controllers\Admin\WhatsAppController;
 use App\Http\Controllers\AnalyticsController;
+use App\Http\Controllers\Admin\MasterDashboardController;
+use App\Http\Controllers\Admin\ProductStockController;
 use App\Http\Controllers\Api\AddressController;
 use App\Http\Controllers\Api\EngagementController;
 use App\Http\Controllers\Api\GeocodeController;
-
+use App\Http\Controllers\Api\Public\CourseController as PublicCourseController;
+use App\Http\Controllers\WebhookController;
+use App\Http\Controllers\RealTimeStreamController;
+use App\Http\Controllers\Api\Admin\StoreSettingController;
+use App\Http\Controllers\Api\Admin\CourseController;
+use App\Http\Controllers\Api\Admin\StudentController;
 // ==========================================
 // ROTAS PÚBLICAS
 
@@ -65,7 +74,8 @@ Route::post('/payment/notify', [PaymentWebhookController::class, 'notify']);
 Route::get('/payment/notify', [PaymentWebhookController::class, 'notify']);
 
 // Evolution API Webhook (sem autenticação para receber notificações)
-Route::post('/webhooks/evolution/{branchId}', [App\Http\Controllers\WebhookController::class, 'evolutionWebhook']);
+
+Route::post('/webhooks/evolution/{branchId}', [WebhookController::class, 'evolutionWebhook']);
 
 // Customer
 Route::get('/customer/last-order', [CheckoutController::class, 'getLastOrderCustomer']);
@@ -80,12 +90,14 @@ Route::prefix('stream')->group(function () {
 });
 
 // SSE para eventos em tempo real
-Route::get('/stream/updates', [\App\Http\Controllers\RealTimeStreamController::class, 'streamUpdates']);
+
+Route::get('/stream/updates', [RealTimeStreamController::class, 'streamUpdates']);
 
 Route::get('/addresses/active', [AddressController::class, 'getActive']);
 
 // Store Settings (public - apenas dados não sensíveis)
-Route::get('/store/settings', [App\Http\Controllers\Api\Admin\StoreSettingController::class, 'public']);
+
+Route::get('/store/settings', [StoreSettingController::class, 'public']);
 
 // Engajamento (registro de eventos)
 Route::post('/engagement/visitor', [EngagementController::class, 'registerVisitor']);
@@ -104,11 +116,11 @@ Route::prefix('admin')->group(function () {
 
         // Master Dashboard - Métricas avançadas
         Route::prefix('master')->middleware('role:master')->group(function () {
-            Route::get('/metrics', [App\Http\Controllers\Admin\MasterDashboardController::class, 'masterMetrics']);
-            Route::get('/stock', [App\Http\Controllers\Admin\MasterDashboardController::class, 'stockByBranch']);
-            Route::get('/top-products', [App\Http\Controllers\Admin\MasterDashboardController::class, 'topProducts']);
-            Route::get('/top-neighborhoods', [App\Http\Controllers\Admin\MasterDashboardController::class, 'topNeighborhoods']);
-            Route::get('/time-series', [App\Http\Controllers\Admin\MasterDashboardController::class, 'timeSeriesData']);
+            Route::get('/metrics', [MasterDashboardController::class, 'masterMetrics']);
+            Route::get('/stock', [MasterDashboardController::class, 'stockByBranch']);
+            Route::get('/top-products', [MasterDashboardController::class, 'topProducts']);
+            Route::get('/top-neighborhoods', [MasterDashboardController::class, 'topNeighborhoods']);
+            Route::get('/time-series', [MasterDashboardController::class, 'timeSeriesData']);
         });
 
                 // Customer
@@ -128,9 +140,9 @@ Route::prefix('admin')->group(function () {
             Route::post('/sync-stock', [ProductAdminController::class, 'syncStock'])->middleware('role:master,admin');        // POST /api/admin/products/sync-stock
             
             // Rotas de estoque por filial
-            Route::get('/{productId}/stocks', [\App\Http\Controllers\Admin\ProductStockController::class, 'index']);
-            Route::put('/{productId}/stocks/{branchId}', [\App\Http\Controllers\Admin\ProductStockController::class, 'update'])->middleware('role:master,admin');
-            Route::post('/{productId}/stocks/bulk', [\App\Http\Controllers\Admin\ProductStockController::class, 'bulkUpdate'])->middleware('role:master,admin');
+            Route::get('/{productId}/stocks', [ProductStockController::class, 'index']);
+            Route::put('/{productId}/stocks/{branchId}', [ProductStockController::class, 'update'])->middleware('role:master,admin');
+            Route::post('/{productId}/stocks/bulk', [ProductStockController::class, 'bulkUpdate'])->middleware('role:master,admin');
         });
         
         
@@ -155,10 +167,10 @@ Route::prefix('admin')->group(function () {
             Route::apiResource('addresses', AddressController::class);
             
             // Store Settings
-            Route::get('settings', [App\Http\Controllers\Api\Admin\StoreSettingController::class, 'index']);
-            Route::post('settings', [App\Http\Controllers\Api\Admin\StoreSettingController::class, 'update']);
-            Route::put('settings', [App\Http\Controllers\Api\Admin\StoreSettingController::class, 'update']);
-            Route::delete('settings', [App\Http\Controllers\Api\Admin\StoreSettingController::class, 'destroy']);
+            Route::get('settings', [StoreSettingController::class, 'index']);
+            Route::post('settings', [StoreSettingController::class, 'update']);
+            Route::put('settings', [StoreSettingController::class, 'update']);
+            Route::delete('settings', [StoreSettingController::class, 'destroy']);
             
             // Branches Management (Filiais)
             Route::prefix('branches')->middleware(['role:master,admin'])->group(function () {
@@ -181,29 +193,31 @@ Route::prefix('admin')->group(function () {
             
             // Branch Payments Management (Pagamentos de Filiais) - Apenas Master
             Route::prefix('payments')->middleware(['role:master'])->group(function () {
-                Route::get('/', [App\Http\Controllers\BranchPaymentController::class, 'index']); // Listar pagamentos
-                Route::get('/dashboard', [App\Http\Controllers\BranchPaymentController::class, 'dashboard']); // Dashboard de vendas
-                Route::post('/calculate', [App\Http\Controllers\BranchPaymentController::class, 'calculatePayments']); // Calcular pagamentos do período
-                Route::patch('/{id}/pay', [App\Http\Controllers\BranchPaymentController::class, 'markAsPaid']); // Dar baixa
+                Route::get('/', [BranchPaymentController::class, 'index']); // Listar pagamentos
+                Route::get('/dashboard', [BranchPaymentController::class, 'dashboard']); // Dashboard de vendas
+                Route::post('/calculate', [BranchPaymentController::class, 'calculatePayments']); // Calcular pagamentos do período
+                Route::patch('/{id}/pay', [BranchPaymentController::class, 'markAsPaid']); // Dar baixa
             });
             
             // WhatsApp Integration (Evolution API) - Master e Admin
             Route::prefix('whatsapp')->middleware(['role:master,admin'])->group(function () {
-                Route::post('/connect', [App\Http\Controllers\Admin\WhatsAppController::class, 'connect']); // Conectar via QR Code
-                Route::get('/qrcode/{branchId}', [App\Http\Controllers\Admin\WhatsAppController::class, 'getQrCode']); // Buscar QR Code
-                Route::get('/status/{branchId}', [App\Http\Controllers\Admin\WhatsAppController::class, 'status']); // Verificar status
-                Route::post('/disconnect/{branchId}', [App\Http\Controllers\Admin\WhatsAppController::class, 'disconnect']); // Desconectar
-                Route::get('/refresh-qr/{branchId}', [App\Http\Controllers\Admin\WhatsAppController::class, 'refreshQrCode']); // Novo QR Code
+                Route::post('/connect', [WhatsAppController::class, 'connect']); // Conectar via QR Code
+                Route::get('/qrcode/{branchId}', [WhatsAppController::class, 'getQrCode']); // Buscar QR Code
+                Route::get('/status/{branchId}', [WhatsAppController::class, 'status']); // Verificar status
+                Route::post('/disconnect/{branchId}', [WhatsAppController::class, 'disconnect']); // Desconectar
+                Route::get('/refresh-qr/{branchId}', [WhatsAppController::class, 'refreshQrCode']); // Novo QR Code
             });
             
             // Courses Management
-            Route::apiResource('courses', App\Http\Controllers\Api\Admin\CourseController::class);
+
+            Route::apiResource('courses', CourseController::class);
             
             // Students Management
-            Route::apiResource('students', App\Http\Controllers\Api\Admin\StudentController::class);
-            Route::post('students/{student}/enroll', [App\Http\Controllers\Api\Admin\StudentController::class, 'enrollInCourse']);
-            Route::patch('students/{student}/courses/{course}/payment', [App\Http\Controllers\Api\Admin\StudentController::class, 'updateEnrollmentPayment']);
-            Route::delete('students/{student}/courses/{course}', [App\Http\Controllers\Api\Admin\StudentController::class, 'removeFromCourse']);
+
+            Route::apiResource('students', StudentController::class);
+            Route::post('students/{student}/enroll', [StudentController::class, 'enrollInCourse']);
+            Route::patch('students/{student}/courses/{course}/payment', [StudentController::class, 'updateEnrollmentPayment']);
+            Route::delete('students/{student}/courses/{course}', [StudentController::class, 'removeFromCourse']);
     });
 
     
@@ -214,8 +228,9 @@ Route::prefix('admin')->group(function () {
 // ==========================================
 
 // Courses (public) - Qualquer pessoa pode ver os cursos e se inscrever
+
 Route::prefix('courses')->group(function () {
-    Route::get('/', [App\Http\Controllers\Api\Public\CourseController::class, 'index']); // Listar cursos ativos
-    Route::get('/{course}', [App\Http\Controllers\Api\Public\CourseController::class, 'show']); // Ver detalhes do curso
-    Route::post('/{course}/enroll', [App\Http\Controllers\Api\Public\CourseController::class, 'enroll']); // Inscrever-se no curso
+    Route::get('/', [PublicCourseController::class, 'index']); // Listar cursos ativos
+    Route::get('/{course}', [PublicCourseController::class, 'show']); // Ver detalhes do curso
+    Route::post('/{course}/enroll', [PublicCourseController::class, 'enroll']); // Inscrever-se no curso
 });
