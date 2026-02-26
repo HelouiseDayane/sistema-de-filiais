@@ -1,3 +1,6 @@
+# Controllers e serviços que podem conter chaves
+brunocakes_backend/app/Http/Controllers/Api/*.php
+brunocakes_backend/app/Services/*.php
 # Docker Compose e arquivos sensíveis
 docker-compose.yml
 docker-compose.*.yml
