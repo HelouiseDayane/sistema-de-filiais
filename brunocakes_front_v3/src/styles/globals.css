@@ -1,0 +1,395 @@
+/* Badge de Estoque - SEMPRE VERDE (estoque disponível padrão) */
+.product-badge-estoque,
+.product-badge-estoque:hover,
+.product-badge-estoque:focus,
+.product-badge-estoque:active,
+[data-badge="estoque"],
+[data-badge="estoque"]:hover,
+.force-green-bg-estoque,
+.force-green-bg-estoque:hover {
+  background-color: #22c55e !important;
+  background: #22c55e !important;
+  color: white !important;
+  border-color: #22c55e !important;
+  border: 1px solid #22c55e !important;
+}
+
+/* Badge de Estoque Baixo - SEMPRE AMARELO */
+.force-yellow-bg,
+.force-yellow-bg:hover {
+  background-color: #facc15 !important;
+  background: #facc15 !important;
+  color: #222 !important;
+  border-color: #facc15 !important;
+  border: 1px solid #facc15 !important;
+}
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --font-size: 16px;
+  --background: #ffffff;
+  --foreground: oklch(0.145 0 0);
+  --card: #ffffff;
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  
+
+  /* Estas cores podem ser sobrescritas dinamicamente via JavaScript quando o admin escolher uma cor personalizada */
+  --primary: oklch(0.45 0.15 142); /* Verde escuro */
+  --primary-foreground: #ffffff;
+  --secondary: oklch(0.95 0.05 142); /* Verde claro */
+  --secondary-foreground: oklch(0.25 0.15 142);
+  
+  --muted: #f0f9f0;
+  --muted-foreground: #6b7c6b;
+  --accent: #e8f5e8;
+  --accent-foreground: oklch(0.25 0.15 142);
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+  --border: rgba(34, 139, 34, 0.15);
+  --input: transparent;
+  --input-background: #f8fdf8;
+  --switch-background: #cbced4;
+  --font-weight-medium: 500;
+  --font-weight-normal: 400;
+  --ring: oklch(0.45 0.15 142);
+  
+
+  --chart-1: oklch(0.55 0.18 142); /* Verde médio */
+  --chart-2: oklch(0.65 0.15 142); /* Verde claro */
+  --chart-3: oklch(0.35 0.20 142); /* Verde escuro */
+  --chart-4: oklch(0.75 0.12 142); /* Verde muito claro */
+  --chart-5: oklch(0.45 0.22 142); /* Verde intenso */
+  
+  --radius: 0.625rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.45 0.15 142);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.45 0.15 142);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.145 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.145 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  
+ 
+  --primary: oklch(0.65 0.15 142); /* Verde mais claro no dark */
+  --primary-foreground: oklch(0.15 0.05 142);
+  --secondary: oklch(0.25 0.10 142);
+  --secondary-foreground: oklch(0.85 0.08 142);
+  
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.396 0.141 25.723);
+  --destructive-foreground: oklch(0.637 0.237 25.331);
+  --border: oklch(0.269 0 0);
+  --input: oklch(0.269 0 0);
+  --ring: oklch(0.65 0.15 142);
+  --font-weight-medium: 500;
+  --font-weight-normal: 400;
+  
+  /* Dark Chart Colors */
+  --chart-1: oklch(0.65 0.18 142);
+  --chart-2: oklch(0.75 0.15 142);
+  --chart-3: oklch(0.55 0.20 142);
+  --chart-4: oklch(0.85 0.12 142);
+  --chart-5: oklch(0.45 0.22 142);
+  
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.65 0.15 142);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(0.269 0 0);
+  --sidebar-ring: oklch(0.65 0.15 142);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-input-background: var(--input-background);
+  --color-switch-background: var(--switch-background);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/**
+ * Base typography. This is not applied to elements which have an ancestor with a Tailwind text class.
+ */
+@layer base {
+  :where(:not(:has([class*=" text-"]), :not(:has([class^="text-"])))) {
+    h1 {
+      font-size: var(--text-2xl);
+      font-weight: var(--font-weight-medium);
+      line-height: 1.5;
+    }
+
+    h2 {
+      font-size: var(--text-xl);
+      font-weight: var(--font-weight-medium);
+      line-height: 1.5;
+    }
+
+    h3 {
+      font-size: var(--text-lg);
+      font-weight: var(--font-weight-medium);
+      line-height: 1.5;
+    }
+
+    h4 {
+      font-size: var(--text-base);
+      font-weight: var(--font-weight-medium);
+      line-height: 1.5;
+    }
+
+    p {
+      font-size: var(--text-base);
+      font-weight: var(--font-weight-normal);
+      line-height: 1.5;
+    }
+
+    label {
+      font-size: var(--text-base);
+      font-weight: var(--font-weight-medium);
+      line-height: 1.5;
+    }
+
+    button {
+      font-size: var(--text-base);
+      font-weight: var(--font-weight-medium);
+      line-height: 1.5;
+    }
+
+    input {
+      font-size: var(--text-base);
+      font-weight: var(--font-weight-normal);
+      line-height: 1.5;
+    }
+  }
+}
+
+html {
+  font-size: var(--font-size);
+}
+
+.bruno-gradient {
+  background: linear-gradient(135deg, oklch(0.45 0.15 142) 0%, oklch(0.55 0.18 142) 100%);
+}
+
+.bruno-text-gradient {
+  background: linear-gradient(135deg, oklch(0.45 0.15 142) 0%, oklch(0.35 0.20 142) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* 
+ * Nota: As classes .bruno-gradient e .bruno-text-gradient podem ser 
+ * sobrescritas dinamicamente via JavaScript quando o administrador 
+ * escolher uma cor primária personalizada nas configurações da loja.
+ * As variáveis CSS também são atualizadas automaticamente.
+ */
+
+/* ========================================
+   CORES FIXAS - MÁXIMA PRIORIDADE
+   ======================================== */
+
+/* Badge de Promoção - SEMPRE VERMELHO - Múltiplos seletores para máxima especificidade */
+.product-badge-promocao,
+.product-badge-promocao:hover,
+.product-badge-promocao:focus,
+.product-badge-promocao:active,
+[data-badge="promocao"],
+[data-badge="promocao"]:hover,
+.force-red-bg,
+.force-red-bg:hover {
+  background-color: #ef4444 !important;
+  background: #ef4444 !important;
+  color: white !important;
+  border-color: #ef4444 !important;
+  border: 1px solid #ef4444 !important;
+}
+
+/* Badge de Novo - SEMPRE VERDE - Múltiplos seletores para máxima especificidade */
+.product-badge-novo,
+.product-badge-novo:hover,
+.product-badge-novo:focus,
+.product-badge-novo:active,
+[data-badge="novo"],
+[data-badge="novo"]:hover,
+.force-green-bg,
+.force-green-bg:hover {
+  background-color: #22c55e !important;
+  background: #22c55e !important;
+  color: white !important;
+  border-color: #22c55e !important;
+  border: 1px solid #22c55e !important;
+}
+
+/* Botões laranja - SEMPRE LARANJA */
+.force-orange-bg,
+.force-orange-bg:hover,
+.force-orange-bg:focus,
+.force-orange-bg:active {
+  background-color: #f97316 !important;
+  background: #f97316 !important;
+  border-color: #f97316 !important;
+}
+
+.force-orange-bg:hover {
+  background-color: #ea580c !important;
+  background: #ea580c !important;
+}
+
+/* Texto branco forçado */
+.force-white-text,
+.force-white-text *,
+.force-white-text:hover,
+.force-white-text:focus {
+  color: white !important;
+}
+
+/* Override específico para badges que estão recebendo cores dinâmicas */
+.inline-flex.items-center.rounded-full.border.px-2\.5.py-0\.5.text-xs.font-semibold[data-badge="promocao"],
+.inline-flex.items-center.rounded-full.border.px-2\.5.py-0\.5.text-xs.font-semibold.product-badge-promocao {
+  background-color: #ef4444 !important;
+  color: white !important;
+  border-color: #ef4444 !important;
+}
+
+.inline-flex.items-center.rounded-full.border.px-2\.5.py-0\.5.text-xs.font-semibold[data-badge="novo"],
+.inline-flex.items-center.rounded-full.border.px-2\.5.py-0\.5.text-xs.font-semibold.product-badge-novo {
+  background-color: #22c55e !important;
+  color: white !important;
+  border-color: #22c55e !important;
+}
+
+/* Badge especifico com máxima especificidade */
+[class*="product-badge-promocao"],
+.product-badge-promocao[class],
+span.product-badge-promocao,
+div .product-badge-promocao,
+.product-badge-promocao[data-badge="promocao"] {
+  background-color: #ef4444 !important;
+  background: #ef4444 !important;
+  color: white !important;
+  border-color: #ef4444 !important;
+  border: 1px solid #ef4444 !important;
+}
+
+[class*="product-badge-novo"],
+.product-badge-novo[class],
+span.product-badge-novo,
+div .product-badge-novo,
+.product-badge-novo[data-badge="novo"] {
+  background-color: #22c55e !important;
+  background: #22c55e !important;
+  color: white !important;
+  border-color: #22c55e !important;
+  border: 1px solid #22c55e !important;
+}
+
+/* Força texto branco em botões "Adicionar" */
+button.force-white-text,
+button.force-white-text span,
+button.force-white-text *,
+.force-white-text button,
+.force-white-text button *,
+.force-orange-bg.force-white-text,
+.force-orange-bg.force-white-text *,
+.force-orange-bg.force-white-text:hover,
+.force-orange-bg.force-white-text:hover * {
+  color: white !important;
+}
+
+/* OVERRIDE ABSOLUTO para badges - máxima especificidade possível */
+span[data-slot="badge"][data-badge="promocao"],
+span[data-slot="badge"].product-badge-promocao,
+.product-badge-promocao[data-slot="badge"],
+span.product-badge-promocao[data-badge="promocao"] {
+  background-color: #ef4444 !important;
+  background: #ef4444 !important;
+  color: white !important;
+  border-color: #ef4444 !important;
+  border: 1px solid #ef4444 !important;
+}
+
+span[data-slot="badge"][data-badge="novo"],
+span[data-slot="badge"].product-badge-novo,
+.product-badge-novo[data-slot="badge"],
+span.product-badge-novo[data-badge="novo"] {
+  background-color: #22c55e !important;
+  background: #22c55e !important;
+  color: white !important;
+  border-color: #22c55e !important;
+  border: 1px solid #22c55e !important;
+}
+
+/* Override EXTREMO - usando seletor de atributo style */
+[data-badge="promocao"][style],
+.product-badge-promocao[style] {
+  background-color: #ef4444 !important;
+  color: white !important;
+  border-color: #ef4444 !important;
+}
+
+[data-badge="novo"][style],
+.product-badge-novo[style] {
+  background-color: #22c55e !important;
+  color: white !important;
+  border-color: #22c55e !important;
+}

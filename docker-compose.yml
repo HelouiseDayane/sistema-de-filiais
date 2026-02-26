@@ -1,0 +1,108 @@
+services:
+
+  # Backend API (apenas rede interna - SEM exposi\u00e7\u00e3o externa)
+  backend:
+    build: ./brunocakes_backend
+    container_name: backend
+    restart: always
+    environment:
+      APP_URL: http://backend:80
+      APP_ENV: production
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: brunocakes
+      DB_USERNAME: root
+      DB_PASSWORD: aligayra658691
+      REDIS_HOST: redis
+      REDIS_PASSWORD: cakes12345671571285415715715785421478214782171285742557
+      REDIS_DB: 1
+      CACHE_DRIVER: redis
+      EVOLUTION_API_URL: https://evohelo.zapsrv.com
+      EVOLUTION_API_KEY: H6M8BHOSP1KH33D5NXJE2XYKEJHYCMGKDYFU7OF13HTP6ZQDQGVWDFX90B3LLQKOFRV7G3DGHMP9V3OPFZFJAOXV4YO5
+      SESSION_DRIVER: redis
+    volumes:
+      - ./brunocakes_backend:/var/www/html
+      - ./docker/php.ini:/usr/local/etc/php/conf.d/custom.ini
+    # Remove depends_on para não tentar criar o container redis
+    expose:
+      - "80"
+    # Porta removida - backend acessível APENAS internamente pelos frontends
+    command: >
+      bash -c "service nginx start && php-fpm"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/api/branches"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - internal
+      - self-hosting01
+
+  # Queue Worker
+  queue:
+    build: ./brunocakes_backend
+    container_name: queue
+    restart: always
+    command: ["php", "artisan", "queue:work", "--sleep=3", "--tries=3"]
+    depends_on:
+      - backend
+    # Remove depends_on para não tentar criar o container redis
+    environment:
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: brunocakes
+      DB_USERNAME: root
+      DB_PASSWORD: aligayra658691
+      REDIS_HOST: redis
+      REDIS_PASSWORD: cakes12345671571285415715715785421478214782171285742557
+      REDIS_DB: 1
+    networks:
+      - internal
+      - self-hosting01
+
+  # Frontend - Modo Desenvolvimento (Vite + Nginx Proxy)
+  frontend-dev:
+    build:
+      context: ./brunocakes_front_v3
+      dockerfile: Dockerfile.dev
+    container_name: frontend-dev
+    restart: always
+    ports:
+      - "8889:8080"  # Porta do Nginx, não do Vite
+    environment:
+      VITE_API_BASE_URL: /api
+      VITE_DOMAIN_BASE_URL: ""
+    volumes:
+      - ./brunocakes_front_v3:/app
+    depends_on:
+      - backend
+    networks:
+      - internal
+
+  # Frontend - Produção (Build com Nginx)
+  frontend-prod:
+    build:
+      context: ./brunocakes_front_v3
+      dockerfile: Dockerfile
+    container_name: frontend-prod
+    restart: always
+    ports:
+      - "9999:80"
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - internal
+
+networks:
+  internal:
+    driver: bridge
+  self-hosting01:
+    external: true
+
+volumes:
+  redis_data:

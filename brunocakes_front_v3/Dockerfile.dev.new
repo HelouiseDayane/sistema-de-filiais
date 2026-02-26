@@ -1,0 +1,27 @@
+FROM node:20
+
+# Instalar nginx
+RUN apt-get update && apt-get install -y nginx && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+
+RUN npm ci
+
+COPY . .
+
+# Copiar configuração do nginx
+COPY nginx.dev.conf /etc/nginx/sites-available/default
+
+# Expor portas
+EXPOSE 5173
+EXPOSE 8080
+
+# Script para iniciar nginx e vite
+RUN echo '#!/bin/bash\n\
+nginx\n\
+npm run dev -- --host 0.0.0.0 --port 5173\n\
+' > /app/start.sh && chmod +x /app/start.sh
+
+CMD ["/app/start.sh"]

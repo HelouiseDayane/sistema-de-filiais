@@ -1,0 +1,48 @@
+
+FROM node:20
+
+# Instalar nginx e supervisor
+RUN apt-get update && \
+    apt-get install -y nginx supervisor && \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copiar tudo antes de instalar dependências
+COPY . .
+
+# Garantir instalação limpa
+RUN rm -rf node_modules && npm install
+
+# Copiar certificados SSL (caso não estejam no contexto acima)
+RUN mkdir -p /etc/nginx/ssl
+COPY ssl/localhost.crt /etc/nginx/ssl/localhost.crt
+COPY ssl/localhost.key /etc/nginx/ssl/localhost.key
+
+# Copiar configuração do nginx para dev
+COPY nginx.dev.conf /etc/nginx/sites-available/default
+
+
+# Criar configuração do supervisor
+RUN echo '[supervisord]\n\
+nodaemon=true\n\
+\n\
+[program:nginx]\n\
+command=nginx -g "daemon off;"\n\
+autostart=true\n\
+autorestart=true\n\
+\n\
+[program:vite]\n\
+command=npx vite --host 0.0.0.0 --port 5173\n\
+directory=/app\n\
+autostart=true\n\
+autorestart=true\n\
+stdout_logfile=/dev/stdout\n\
+stdout_logfile_maxbytes=0\n\
+stderr_logfile=/dev/stderr\n\
+stderr_logfile_maxbytes=0\n\
+' > /etc/supervisor/conf.d/supervisord.conf
+
+EXPOSE 5173 8080
+
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

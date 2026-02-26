@@ -1,0 +1,31 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" id="meta-description" content="" />
+    <meta name="theme-color" content="#228B22" />
+    <link rel="manifest" href="/manifest.json" />
+  <link rel="icon" type="image/x-icon" href="/icone-selobrunocakes.ico" />
+  <title id="dynamic-title"></title>
+  <script>
+    // Preenche dinamicamente o título e descrição usando storeSettings
+    // Use caminho relativo para funcionar em dev e produção (sem hardcode em localhost)
+    fetch('/api/store/settings')
+      .then(res => res.ok ? res.json() : Promise.reject(new Error('store settings not found')))
+      .then(data => {
+        document.title = `${data.store_name}${data.store_slogan ? ' - ' + data.store_slogan : ''}`;
+        document.getElementById('dynamic-title').textContent = document.title;
+        document.getElementById('meta-description').setAttribute('content', `${data.store_name}${data.store_slogan ? ' - ' + data.store_slogan : ''} A melhor doceria da cidade.`);
+      })
+      .catch(() => {
+        // Não quebrar a página se a configuração não estiver disponível no momento
+      });
+  </script>
+
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>  

@@ -1,0 +1,31 @@
+{
+  "name": "Bruno Miranda Cakes - Aqui não é fatia nem pedaço, aqui é Tora!!",
+  "short_name": "Bruno Miranda Cakes",
+  "description": "A melhor doceria da cidade! Aqui não é fatia nem pedaço, aqui é Tora!!",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#138b2b",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "192x192",
+      "type": "image/x-icon",
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon.ico",
+      "sizes": "512x512",
+      "type": "image/x-icon",
+      "purpose": "any"
+    }
+  ],
+  "categories": [
+    "food",
+    "shopping"
+  ],
+  "lang": "pt-BR",
+  "scope": "/",
+  "prefer_related_applications": false
+}
