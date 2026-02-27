@@ -13,27 +13,28 @@ class SyncExpiredOrdersStock extends Command
     protected $description = 'Libera estoque de pedidos expirados/cancelados que ainda possuem itens reservados';
 
     public function handle()
-            // Expira carrinhos abandonados (TTL expirado)
-            $cartKeys = Redis::connection('stock')->keys('cart:*');
-            $expiredCarts = 0;
-            foreach ($cartKeys as $cartKey) {
-                $ttl = Redis::connection('stock')->ttl($cartKey);
-                if ($ttl === -2 || $ttl === 0) { // expirado ou sem TTL
-                    $sessionId = str_replace('cart:', '', $cartKey);
-                    // Busca produtos do carrinho
-                    $cartData = Redis::connection('stock')->get($cartKey);
-                    if ($cartData) {
-                        $cart = json_decode($cartData, true);
-                        foreach ($cart as $productId => $item) {
-                            $quantity = $item['quantity'] ?? 1;
-                            dispatch(new \App\Jobs\ExpireCartJob($sessionId, $productId, $quantity));
-                        }
-                    }
-                    $expiredCarts++;
-                }
-            }
-            $this->info("Carrinhos expirados processados: {$expiredCarts}");
     {
+        // Expira carrinhos abandonados (TTL expirado)
+        $cartKeys = Redis::connection('stock')->keys('cart:*');
+        $expiredCarts = 0;
+        foreach ($cartKeys as $cartKey) {
+            $ttl = Redis::connection('stock')->ttl($cartKey);
+            if ($ttl === -2 || $ttl === 0) { // expirado ou sem TTL
+                $sessionId = str_replace('cart:', '', $cartKey);
+                // Busca produtos do carrinho
+                $cartData = Redis::connection('stock')->get($cartKey);
+                if ($cartData) {
+                    $cart = json_decode($cartData, true);
+                    foreach ($cart as $productId => $item) {
+                        $quantity = $item['quantity'] ?? 1;
+                        dispatch(new \App\Jobs\ExpireCartJob($sessionId, $productId, $quantity));
+                    }
+                }
+                $expiredCarts++;
+            }
+        }
+        $this->info("Carrinhos expirados processados: {$expiredCarts}");
+
         $productId = $this->option('product');
         if ($productId) {
             // Limpa reserva do produto específico, ignorando pedidos

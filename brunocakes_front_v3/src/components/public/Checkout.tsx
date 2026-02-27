@@ -350,36 +350,30 @@ export const Checkout = () => {
           <DialogHeader>
             <DialogTitle>Pedido realizado com sucesso!</DialogTitle>
             <DialogDescription>
-              {/* DEBUG TEMPORÁRIO PIX */}
-              <div style={{background:'#fffbe6',color:'#b8860b',padding:8,borderRadius:4,marginBottom:8,fontSize:12}}>
-                <div><b>DEBUG PIX</b></div>
-                <div>pixQrCodeBase64: {String(pixQrCodeBase64)}</div>
-                <div>pixCopiaECola: {String(pixCopiaECola)}</div>
-              </div>
-              {pixQrCodeBase64 || pixCopiaECola ? (
-                <>
-                  <div className="mb-4 text-center">
-                    <strong>Pagamento via PIX</strong>
+              {pixQrCodeBase64 ? (
+                <div className="flex flex-col items-center gap-4 py-2">
+                  <div className="flex flex-col items-center gap-2">
+                    <span className="inline-flex items-center gap-2 text-green-700 text-lg font-semibold">
+                      <svg width="28" height="28" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="#16a34a"/><path d="M8 12.5l2.5 2.5 5-5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      Pagamento via PIX
+                    </span>
                   </div>
-                  {pixQrCodeBase64 && (
-                    <div className="flex flex-col items-center mb-4">
-                      <img
-                        src={pixQrCodeBase64}
-                        alt="QR Code PIX"
-                        style={{ width: 180, height: 180, margin: '0 auto', border: '1px solid #eee', background: '#fff' }}
-                      />
-                      <span className="text-xs text-muted-foreground mt-2">Escaneie o QR Code para pagar</span>
-                    </div>
-                  )}
+                  <img
+                    src={pixQrCodeBase64}
+                    alt="QR Code PIX"
+                    className="rounded-lg border-2 border-green-200 bg-white shadow-md"
+                    style={{ width: 200, height: 200, maxWidth: '80vw', maxHeight: '40vw', objectFit: 'contain' }}
+                  />
+                  <span className="text-xs text-muted-foreground mt-2">Escaneie o QR Code para pagar</span>
                   {pixCopiaECola && (
-                    <div className="flex flex-col items-center mb-2">
-                      <label className="text-xs font-medium mb-1">Pix Copia e Cola:</label>
-                      <div className="flex items-center gap-2 w-full">
+                    <div className="w-full flex flex-col items-center gap-2 mt-2">
+                      <label className="text-xs font-medium text-green-800">Pix Copia e Cola:</label>
+                      <div className="flex items-center gap-2 w-full max-w-full justify-center">
                         <Input
                           value={pixCopiaECola}
                           readOnly
-                          className="w-full text-xs"
-                          style={{ fontFamily: 'monospace' }}
+                          className="w-full text-base text-center border-2 border-green-500 bg-green-50 font-mono px-2 py-2"
+                          style={{ fontFamily: 'monospace', fontSize: '1em' }}
                         />
                         <Button
                           type="button"
@@ -399,13 +393,52 @@ export const Checkout = () => {
                     Após o pagamento, você receberá a confirmação no WhatsApp.<br />
                     Você pode acompanhar o status na tela de rastreamento.
                   </div>
-                </>
+                </div>
+              ) : pixCopiaECola ? (
+                <div className="flex flex-col items-center gap-4 py-2">
+                  <span className="inline-flex items-center gap-2 text-green-700 text-lg font-semibold">
+                    <svg width="28" height="28" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="#16a34a"/><path d="M8 12.5l2.5 2.5 5-5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    Pagamento via PIX
+                  </span>
+                  <div className="w-full flex flex-col items-center gap-2 mt-2">
+                    <label className="text-xs font-medium text-green-800">Pix Copia e Cola:</label>
+                    <div className="flex items-center gap-2 w-full max-w-full justify-center">
+                      <Input
+                        value={pixCopiaECola}
+                        readOnly
+                        className="w-full text-base text-center border-2 border-green-500 bg-green-50 font-mono px-2 py-2"
+                        style={{ fontFamily: 'monospace', fontSize: '1em' }}
+                      />
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="outline"
+                        onClick={() => {
+                          navigator.clipboard.writeText(pixCopiaECola);
+                          toast.success('Código PIX copiado!');
+                        }}
+                      >
+                        <Copy className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-2 mb-2 text-center">
+                    Após o pagamento, você receberá a confirmação no WhatsApp.<br />
+                    Você pode acompanhar o status na tela de rastreamento.
+                  </div>
+                </div>
               ) : (
-                <>
-                  Seu pedido foi enviado para o seu WhatsApp!<br />
-                  Verifique o aplicativo para confirmar o pedido e aguarde o contato da loja.<br />
-                  Você pode acompanhar o status na tela de rastreamento.
-                </>
+                <div className="flex flex-col items-center gap-4 py-2">
+                  <span className="inline-flex items-center gap-2 text-green-700 text-lg font-semibold">
+                    <svg width="28" height="28" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="#16a34a"/><path d="M8 12.5l2.5 2.5 5-5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    Pedido enviado!
+                  </span>
+                  <div className="text-center text-base text-muted-foreground">
+                    Seu pedido foi enviado para o seu WhatsApp!<br />
+                    Verifique o aplicativo para confirmar o pedido e aguarde o contato da loja.<br />
+                    Você pode acompanhar o status na tela de rastreamento.
+                  </div>
+                </div>
               )}
             </DialogDescription>
           </DialogHeader>

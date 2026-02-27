@@ -191,7 +191,7 @@ class CheckoutController extends Controller
         Redis::connection('stock')->set("product_reserved_time_{$branchId}_{$productId}", time());
         // Salvar reserva individual (para limpeza posterior)
         $reservationKey = $this->getReservationKey($sessionId, $branchId, $productId);
-        Redis::connection('stock')->setex($reservationKey, 600, $quantity); // 10 min TTL
+        Redis::connection('stock')->setex($reservationKey, 300, $quantity); // 5 min TTL
 
         // Adicionar ao carrinho acumulando produtos
         $cartKey = "cart:{$sessionId}";
@@ -215,7 +215,7 @@ class CheckoutController extends Controller
             ];
         }
 
-        Redis::connection('stock')->setex($cartKey, 600, json_encode($cart)); // 10 min TTL
+        Redis::connection('stock')->setex($cartKey, 300, json_encode($cart)); // 5 min TTL
     
         $this->registrarAtualizacaoEstoque($productId, 'stock_change');
         \Log::info('[AddToCart] registrarAtualizacaoEstoque chamado', [
@@ -226,14 +226,14 @@ class CheckoutController extends Controller
         // ✅ DISPARAR JOB DE EXPIRAÇÃO
         try {
             ExpireCartJob::dispatch($sessionId, $productId, $quantity)
-                ->delay(now()->addMinutes(10)); // 10 minutos
+                ->delay(now()->addMinutes(5)); // 5 minutos
 
             Log::info('🛒 Job ExpireCartJob disparado com sucesso', [
                 'session_id' => $sessionId,
                 'product_id' => $productId,
                 'quantity' => $quantity,
-                'delay' => '10 minutes',
-                'will_expire_at' => now()->addMinutes(10)->format('H:i:s')
+                'delay' => '5 minutes',
+                'will_expire_at' => now()->addMinutes(5)->format('H:i:s')
             ]);
         } catch (\Exception $e) {
             Log::error('❌ Erro ao disparar ExpireCartJob', [
@@ -275,36 +275,30 @@ class CheckoutController extends Controller
         $reservedQuantity = Redis::get($reserveKey) ?? 0;
         
         if ($reservedQuantity > 0) {
-            // Liberar estoque reservado
+            // Liberar estoque reservado (apenas reservado, nunca mexer no estoque real aqui)
             Redis::decrby("product_reserved_{$productId}", $reservedQuantity);
-            
             // Garantir que não fique negativo
             $currentReserved = Redis::get("product_reserved_{$productId}") ?? 0;
             if ($currentReserved < 0) {
                 Redis::set("product_reserved_{$productId}", 0);
-                Redis::set("product_reserved_{$productId}", $quantidade);
-                Redis::set("product_reserved_time_{$productId}", time());
             }
         }
-        
+
         // Remover reserva
         Redis::del($reserveKey);
-        
+
         // Atualizar carrinho (removendo o item)
         $cartData = Redis::get($cartKey);
         if ($cartData) {
             $cart = json_decode($cartData, true);
             unset($cart[$productId]);
-            
             if (empty($cart)) {
                 Redis::del($cartKey);
             } else {
-                Redis::setex($cartKey, 600, json_encode($cart));
+                Redis::setex($cartKey, 300, json_encode($cart));
             }
         }
         $this->registrarAtualizacaoEstoque($productId, 'stock_change');
-     
-        Redis::set("product_stock_{$productId}", Product::find($productId)->quantity);
         return response()->json([
             'message' => 'Produto removido do carrinho',
             'released_quantity' => $reservedQuantity
@@ -349,7 +343,7 @@ class CheckoutController extends Controller
         
         // Atualizar reserva
         Redis::incrby("product_reserved_{$productId}", $quantityDiff);
-        Redis::setex($reserveKey, 600, $newQuantity);
+        Redis::setex($reserveKey, 300, $newQuantity);
         
         // Atualizar carrinho
         $cartKey = "cart:{$sessionId}";
@@ -359,7 +353,7 @@ class CheckoutController extends Controller
             if (isset($cart[$productId])) {
                 $cart[$productId]['quantity'] = $newQuantity;
                 $cart[$productId]['total_price'] = $cart[$productId]['unit_price'] * $newQuantity;
-                Redis::setex($cartKey, 600, json_encode($cart));
+                Redis::setex($cartKey, 300, json_encode($cart));
             }
         }
 
@@ -715,7 +709,7 @@ class CheckoutController extends Controller
 
         if (!$cartData) {
                return response()->json([
-                'message' => 'Seu carrinho expirou! Você tem apenas 10 minutos para escolher seus produtos.'
+                'message' => 'Seu carrinho expirou! Você tem apenas 5 minutos para escolher seus produtos.'
             ], 410);
         }
 
@@ -731,20 +725,41 @@ class CheckoutController extends Controller
         $orderItems = [];
         foreach ($data['items'] as $item) {
             $productId = (int) $item['product_id'];
-            $quantity = (int) $item['quantity'];
+            $requestedQuantity = (int) $item['quantity'];
             $product = Product::find($productId);
             if ($product) {
                 $unitPrice = $product->is_promo && $product->promotion_price !== null ? $product->promotion_price : $product->price;
-                $totalPrice = $unitPrice * $quantity;
+                // Buscar estoque disponível considerando reservas
+                $branchId = $data['branch_id'];
+                $stockKey = $this->getStockKey($branchId, $productId);
+                $reservedKey = $this->getReservedKey($branchId, $productId);
+                $currentStock = Redis::connection('stock')->get($stockKey);
+                if ($currentStock === null) {
+                    $productStock = \App\Models\ProductStock::where('product_id', $productId)
+                        ->where('branch_id', $branchId)
+                        ->first();
+                    $currentStock = $productStock ? $productStock->quantity : 0;
+                }
+                $reservedStock = Redis::connection('stock')->get($reservedKey) ?? 0;
+                $availableStock = max(0, (int)$currentStock - (int)$reservedStock);
+                // Limitar quantidade ao disponível
+                $finalQuantity = min($requestedQuantity, $availableStock);
+                if ($finalQuantity <= 0) {
+                    continue; // Não adiciona item sem estoque
+                }
+                $totalPrice = $unitPrice * $finalQuantity;
                 $orderItems[] = [
                     'product_id' => $productId,
                     'product_name' => $product->name,
                     'unit_price' => $unitPrice,
-                    'quantity' => $quantity,
+                    'quantity' => $finalQuantity,
                     'total_price' => $totalPrice
                 ];
                 $totalAmount += $totalPrice;
             }
+        }
+        if (empty($orderItems)) {
+            return response()->json(['message' => 'Nenhum item disponível em estoque para finalizar o pedido.'], 400);
         }
 
         DB::beginTransaction();
@@ -797,7 +812,10 @@ class CheckoutController extends Controller
             \Log::info('[Checkout] Antes de gerar PIX', ['order_id' => $order->id, 'random_key' => $randomKey]);
             $pixResponse = null;
             try {
-                $pixResponse = app(PaymentWebhookController::class)->gerarPixPagamento($order->id, $randomKey);
+                $pixResponseRaw = app(PaymentWebhookController::class)->gerarPixPagamento($order->id, $randomKey);
+                $pixResponse = $pixResponseRaw instanceof \Illuminate\Http\JsonResponse
+                    ? $pixResponseRaw->getData(true)
+                    : $pixResponseRaw;
                 \Log::info('[Checkout] PIX gerado com sucesso', ['order_id' => $order->id, 'pix_response' => $pixResponse]);
             } catch (\Exception $pixEx) {
                 \Log::error('[Checkout] Erro ao gerar PIX', ['order_id' => $order->id, 'error' => $pixEx->getMessage(), 'trace' => $pixEx->getTraceAsString()]);
@@ -826,6 +844,8 @@ class CheckoutController extends Controller
                 'order_id' => $order->id,
                 'order' => $order->load('items'),
                 'payment' => $payment,
+                'pix_qr_code_base64' => $pixResponse['QrCode'] ?? $pixResponse['qr_code'] ?? $pixResponse['qrcode'] ?? null,
+                'pix_copia_e_cola' => $pixResponse['codePIX'] ?? $pixResponse['pix_copia_e_cola'] ?? $pixResponse['qrcode_text'] ?? null,
                 'pix' => $pixResponse,
                 'checkout_expires_in_minutes' => 15
             ], 201);
@@ -939,7 +959,7 @@ class CheckoutController extends Controller
             return response()->json(['message' => 'Telefone é obrigatório'], 400);
         }
         $cleanPhone = preg_replace('/\D/', '', $phone);
-        $lastOrder = Order::whereRaw("REPLACE(REPLACE(REPLACE(REPLACE(customer_phone, '+', ''), '-', ''), '(', ''), ')', '') LIKE ?", ['%' . $cleanPhone])
+        $lastOrder = Order::whereRaw("REGEXP_REPLACE(customer_phone, '[^0-9]', '') = ?", [$cleanPhone])
             ->with('items')
             ->orderBy('created_at', 'desc')
             ->first();
