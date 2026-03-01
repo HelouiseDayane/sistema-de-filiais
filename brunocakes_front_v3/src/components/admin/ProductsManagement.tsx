@@ -271,29 +271,24 @@ const handleSubmit = async (e: React.FormEvent) => {
   try {
     if (editingProduct) {
       // Atualiza produto existente
-      const updatedProduct = await adminApi.updateProduct(editingProduct.id, productData);
-      // Atualiza estado local imediatamente
-      setAdminProducts(adminProducts.map(p => p.id === editingProduct.id ? { ...p, ...updatedProduct } : p));
+      await adminApi.updateProduct(editingProduct.id, productData);
       toast.success('Produto atualizado com sucesso!');
     } else {
       // Cria novo produto
       const newProduct = await adminApi.createProduct(productData);
-      
       // Criar estoques por filial
       const stocksToCreate = Object.entries(branchStocks)
         .filter(([_, qty]) => qty > 0)
         .map(([branchId, quantity]) => ({ branch_id: parseInt(branchId), quantity }));
-      
       if (stocksToCreate.length > 0) {
         await adminApi.post(`/admin/products/${newProduct.id}/stocks/bulk`, {
           stocks: stocksToCreate
         });
       }
-      
-      setAdminProducts([newProduct, ...adminProducts]); // adiciona no topo da tabela
       toast.success('Produto criado com sucesso em todas as filiais!');
     }
-
+    // Refaz o fetch da lista de produtos após criar/editar
+    await refreshProducts();
     resetForm();
     setIsDialogOpen(false);
   } catch (error: any) {

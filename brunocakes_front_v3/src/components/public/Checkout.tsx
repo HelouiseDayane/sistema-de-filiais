@@ -59,7 +59,24 @@ export const Checkout = () => {
   const [showOrderConfirmationModal, setShowOrderConfirmationModal] = useState(false);
   // Estados para PIX
   const [pixQrCodeBase64, setPixQrCodeBase64] = useState<string | null>(null);
+  const [pixQrCodeUrl, setPixQrCodeUrl] = useState<string | null>(null);
   const [pixCopiaECola, setPixCopiaECola] = useState<string | null>(null);
+  const [pixQrCodeError, setPixQrCodeError] = useState<string | null>(null);
+
+  // Logar valor do QR Code quando o modal abrir
+  useEffect(() => {
+    if (showOrderConfirmationModal) {
+      console.log('PIX QR Code (base64 ou URL):', pixQrCodeBase64);
+    }
+  }, [showOrderConfirmationModal, pixQrCodeBase64]);
+
+  // Redirecionar para o cardápio se o carrinho expirar ou ficar vazio
+  useEffect(() => {
+    if (cart.length === 0) {
+      toast.error('Seu carrinho expirou ou ficou vazio. Redirecionando para o cardápio...');
+      navigate('/');
+    }
+  }, [cart.length, navigate]);
 
   // Função para criar pedido
   const createOrder = async (customerData: CustomerData, cart: any[], total: number) => {
@@ -108,7 +125,9 @@ export const Checkout = () => {
       const response = await api.createOrder(orderData);
       // Salva os dados do PIX se existirem
       setPixQrCodeBase64(response?.pix_qr_code_base64 || null);
+      setPixQrCodeUrl(response?.pix_qr_code_url || null);
       setPixCopiaECola(response?.pix_copia_e_cola || null);
+      setPixQrCodeError(response?.error || null);
       // Iniciar timer de expiração do checkout
       if (response?.id) {
         startCheckoutExpiration(response.id.toString(), sessionId);
@@ -341,30 +360,39 @@ export const Checkout = () => {
   return (
     <div className="checkout-container">
       {/* Botão de confirmação do pedido (modal) */}
-      <Dialog open={showOrderConfirmationModal} onOpenChange={setShowOrderConfirmationModal}>
-        <DialogContent
-          onOpenAutoFocus={() => {
-            // Não fecha automaticamente, aguarda ação do usuário
-          }}
-        >
+      <Dialog open={showOrderConfirmationModal}>
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Pedido realizado com sucesso!</DialogTitle>
             <DialogDescription>
-              {pixQrCodeBase64 ? (
+              {(pixCopiaECola || pixQrCodeUrl || pixQrCodeBase64) ? (
                 <div className="flex flex-col items-center gap-4 py-2">
-                  <div className="flex flex-col items-center gap-2">
-                    <span className="inline-flex items-center gap-2 text-green-700 text-lg font-semibold">
-                      <svg width="28" height="28" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="#16a34a"/><path d="M8 12.5l2.5 2.5 5-5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                      Pagamento via PIX
-                    </span>
-                  </div>
-                  <img
-                    src={pixQrCodeBase64}
-                    alt="QR Code PIX"
-                    className="rounded-lg border-2 border-green-200 bg-white shadow-md"
-                    style={{ width: 200, height: 200, maxWidth: '80vw', maxHeight: '40vw', objectFit: 'contain' }}
-                  />
-                  <span className="text-xs text-muted-foreground mt-2">Escaneie o QR Code para pagar</span>
+                  <span className="inline-flex items-center gap-2 text-green-700 text-lg font-semibold">
+                    <svg width="28" height="28" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="#16a34a"/><path d="M8 12.5l2.5 2.5 5-5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    Pagamento via PIX
+                  </span>
+                  {pixQrCodeUrl ? (
+                    <img
+                      src={pixQrCodeUrl}
+                      alt="QR Code PIX"
+                      className="rounded-lg border-2 border-green-200 bg-white shadow-md"
+                      style={{ width: 200, height: 200, maxWidth: '80vw', maxHeight: '40vw', objectFit: 'contain' }}
+                    />
+                  ) : pixQrCodeBase64 ? (
+                    <img
+                      src={pixQrCodeBase64}
+                      alt="QR Code PIX"
+                      className="rounded-lg border-2 border-green-200 bg-white shadow-md"
+                      style={{ width: 200, height: 200, maxWidth: '80vw', maxHeight: '40vw', objectFit: 'contain' }}
+                    />
+                  ) : pixQrCodeError ? (
+                    <div className="text-center text-red-600 font-semibold mb-2">
+                      Erro ao gerar QR Code PIX:<br />
+                      <span className="text-xs break-all">{pixQrCodeError}</span>
+                    </div>
+                  ) : (
+                    <span className="text-xs text-red-600 mt-2">QR Code do PIX não foi gerado. Pague usando o código Copia e Cola ou tente novamente.</span>
+                  )}
                   {pixCopiaECola && (
                     <div className="w-full flex flex-col items-center gap-2 mt-2">
                       <label className="text-xs font-medium text-green-800">Pix Copia e Cola:</label>
@@ -389,39 +417,6 @@ export const Checkout = () => {
                       </div>
                     </div>
                   )}
-                  <div className="text-xs text-muted-foreground mt-2 mb-2 text-center">
-                    Após o pagamento, você receberá a confirmação no WhatsApp.<br />
-                    Você pode acompanhar o status na tela de rastreamento.
-                  </div>
-                </div>
-              ) : pixCopiaECola ? (
-                <div className="flex flex-col items-center gap-4 py-2">
-                  <span className="inline-flex items-center gap-2 text-green-700 text-lg font-semibold">
-                    <svg width="28" height="28" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="#16a34a"/><path d="M8 12.5l2.5 2.5 5-5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                    Pagamento via PIX
-                  </span>
-                  <div className="w-full flex flex-col items-center gap-2 mt-2">
-                    <label className="text-xs font-medium text-green-800">Pix Copia e Cola:</label>
-                    <div className="flex items-center gap-2 w-full max-w-full justify-center">
-                      <Input
-                        value={pixCopiaECola}
-                        readOnly
-                        className="w-full text-base text-center border-2 border-green-500 bg-green-50 font-mono px-2 py-2"
-                        style={{ fontFamily: 'monospace', fontSize: '1em' }}
-                      />
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant="outline"
-                        onClick={() => {
-                          navigator.clipboard.writeText(pixCopiaECola);
-                          toast.success('Código PIX copiado!');
-                        }}
-                      >
-                        <Copy className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
                   <div className="text-xs text-muted-foreground mt-2 mb-2 text-center">
                     Após o pagamento, você receberá a confirmação no WhatsApp.<br />
                     Você pode acompanhar o status na tela de rastreamento.
@@ -483,7 +478,7 @@ export const Checkout = () => {
       <Alert className="mb-6 border-2 border-blue-500 bg-blue-50">
         <Clock className="h-4 w-4 text-blue-600" />
         <AlertDescription className="font-medium text-blue-800">
-          ⏰ <strong>Atenção:</strong> Você tem apenas <strong>3 minutos</strong> para finalizar sua compra após adicionar itens ao carrinho. 
+          ⏰ <strong>Atenção:</strong> Você tem apenas <strong>{CHECKOUT_EXPIRATION_MINUTES} minutos</strong> para finalizar sua compra após adicionar itens ao carrinho. 
           Depois desse tempo, o carrinho será limpo automaticamente e você precisará selecionar os produtos novamente.
         </AlertDescription>
       </Alert>

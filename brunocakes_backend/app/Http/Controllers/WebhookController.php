@@ -148,7 +148,7 @@ class WebhookController extends Controller
             }
             
             if ($phoneNumber) {
-                $branch->whatsapp_instance_name = $phoneNumber;
+                // Nunca sobrescrever whatsapp_instance_name, apenas atualizar whatsapp_number
                 $branch->whatsapp_number = $phoneNumber;
             }
             

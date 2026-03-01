@@ -18,8 +18,8 @@ export interface ExpirationStatus {
   formattedTime: string;
 }
 
-const CART_EXPIRATION_MINUTES = 10;
-const CHECKOUT_EXPIRATION_MINUTES = 10;
+const CART_EXPIRATION_MINUTES = 5;
+const CHECKOUT_EXPIRATION_MINUTES = 5;
 const WARNING_THRESHOLD_MINUTES = 2;
 const CRITICAL_THRESHOLD_SECONDS = 30;
 

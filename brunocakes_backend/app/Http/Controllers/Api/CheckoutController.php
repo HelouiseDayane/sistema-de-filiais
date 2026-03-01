@@ -104,6 +104,26 @@ class CheckoutController extends Controller
         $productId = $data['product_id'];
         $quantity = $data['quantity'];
         $branchId = $data['branch_id'];
+        $cartKey = "cart:{$sessionId}";
+        Log::info('[Carrinho] Criando/atualizando carrinho', [
+            'session_id' => $sessionId,
+            'cartKey' => $cartKey,
+            'expires_in' => 300,
+            'branch_id' => $branchId,
+            'product_id' => $productId,
+            'timestamp' => now()->toDateTimeString()
+        ]);
+        $data = $request->validate([
+            'session_id' => 'required|string',
+            'product_id' => 'required|integer|exists:products,id',
+            'quantity' => 'required|integer|min:1',
+            'branch_id' => 'required|integer|exists:branches,id'
+        ]);
+
+        $sessionId = $data['session_id'];
+        $productId = $data['product_id'];
+        $quantity = $data['quantity'];
+        $branchId = $data['branch_id'];
 
         try {
             // Testar conexão Redis primeiro e logar configurações
@@ -211,7 +231,7 @@ class CheckoutController extends Controller
                 'quantity' => $quantity,
                 'total_price' => $product->price * $quantity,
                 'image_url' => $product->image ? asset('storage/' . $product->image) : null,
-                'expires_at' => now()->addMinutes(10)->toISOString()
+                'expires_at' => now()->addMinutes(5)->toISOString()
             ];
         }
 
@@ -267,35 +287,40 @@ class CheckoutController extends Controller
 
         $sessionId = $data['session_id'];
         $productId = $data['product_id'];
-        
         $cartKey = "cart:{$sessionId}";
-        $reserveKey = "reserve:{$sessionId}:{$productId}";
-        
-        // Obter quantidade reservada antes de remover
-        $reservedQuantity = Redis::get($reserveKey) ?? 0;
-        
-        if ($reservedQuantity > 0) {
-            // Liberar estoque reservado (apenas reservado, nunca mexer no estoque real aqui)
-            Redis::decrby("product_reserved_{$productId}", $reservedQuantity);
-            // Garantir que não fique negativo
-            $currentReserved = Redis::get("product_reserved_{$productId}") ?? 0;
-            if ($currentReserved < 0) {
-                Redis::set("product_reserved_{$productId}", 0);
+        $cartData = Redis::connection('stock')->get($cartKey);
+        $branchId = null;
+        if ($cartData) {
+            $cart = json_decode($cartData, true);
+            if (isset($cart[$productId]['branch_id'])) {
+                $branchId = $cart[$productId]['branch_id'];
             }
         }
-
-        // Remover reserva
-        Redis::del($reserveKey);
-
+        if (!$branchId) {
+            return response()->json(['message' => 'branch_id não encontrado no carrinho'], 400);
+        }
+        $reserveKey = $this->getReservationKey($sessionId, $branchId, $productId);
+        $reservedKey = $this->getReservedKey($branchId, $productId);
+        $reservedQuantity = Redis::connection('stock')->get($reserveKey) ?? 0;
+        if ($reservedQuantity > 0) {
+            Redis::connection('stock')->decrby($reservedKey, $reservedQuantity);
+            $currentReserved = Redis::connection('stock')->get($reservedKey) ?? 0;
+            if ($currentReserved < 0) {
+                Redis::connection('stock')->set($reservedKey, 0);
+            }
+            // Disparar Jobs de expiração e sincronização
+            \App\Jobs\ExpireCartJob::dispatch($sessionId, $productId, $reservedQuantity);
+            \App\Jobs\SyncStockJob::dispatch($branchId, $productId);
+        }
+        Redis::connection('stock')->del($reserveKey);
         // Atualizar carrinho (removendo o item)
-        $cartData = Redis::get($cartKey);
         if ($cartData) {
             $cart = json_decode($cartData, true);
             unset($cart[$productId]);
             if (empty($cart)) {
-                Redis::del($cartKey);
+                Redis::connection('stock')->del($cartKey);
             } else {
-                Redis::setex($cartKey, 300, json_encode($cart));
+                Redis::connection('stock')->setex($cartKey, 300, json_encode($cart));
             }
         }
         $this->registrarAtualizacaoEstoque($productId, 'stock_change');
@@ -344,6 +369,19 @@ class CheckoutController extends Controller
         // Atualizar reserva
         Redis::incrby("product_reserved_{$productId}", $quantityDiff);
         Redis::setex($reserveKey, 300, $newQuantity);
+        // Disparar Job de sincronização de estoque
+        $branchId = null;
+        $cartKey = "cart:{$sessionId}";
+        $cartData = Redis::get($cartKey);
+        if ($cartData) {
+            $cart = json_decode($cartData, true);
+            if (isset($cart[$productId]['branch_id'])) {
+                $branchId = $cart[$productId]['branch_id'];
+            }
+        }
+        if ($branchId) {
+            \App\Jobs\SyncStockJob::dispatch($branchId, $productId);
+        }
         
         // Atualizar carrinho
         $cartKey = "cart:{$sessionId}";
@@ -404,10 +442,15 @@ class CheckoutController extends Controller
         $cartData = Redis::get($cartKey);
         
         if (!$cartData) {
+            Log::warning('[Carrinho] Carrinho expirado ou removido', [
+                'session_id' => $sessionId,
+                'cartKey' => $cartKey,
+                'timestamp' => now()->toDateTimeString()
+            ]);
             // Limpa carrinho e libera estoque se expirado
             $this->clearCart($sessionId);
             return response()->json([
-                'message' => 'Seu carrinho expirou! Você tem apenas 10 minutos para escolher seus produtos.'
+                'message' => 'Seu carrinho expirou! Você tem apenas 5 minutos para escolher seus produtos.'
             ], 410);
         }
         
@@ -430,24 +473,42 @@ class CheckoutController extends Controller
         $cartData = Redis::connection('stock')->get($cartKey);
         
         if ($cartData) {
+            Log::info('[Carrinho] Limpando carrinho', [
+                'session_id' => $sessionId,
+                'cartKey' => $cartKey,
+                'timestamp' => now()->toDateTimeString()
+            ]);
             $cart = json_decode($cartData, true);
             // Liberar todas as reservas e recalcular reservado total (por filial)
+            // Disparar Jobs de expiração e sincronização
+            \App\Jobs\ExpireCartJob::dispatch($sessionId, $productId, $reservedQuantity);
+            \App\Jobs\SyncStockJob::dispatch($branchId, $productId);
             foreach ($cart as $productId => $item) {
                 $branchId = $item['branch_id'] ?? null;
                 if (!$branchId) {
                     \Log::warning("[ClearCart] Item sem branch_id", ['product_id' => $productId]);
                     continue;
                 }
-                
+
                 $reserveKey = $this->getReservationKey($sessionId, $branchId, $productId);
                 $reservedQuantity = Redis::connection('stock')->get($reserveKey) ?? 0;
-                
+                \Log::info('[ClearCart] Liberando reserva individual', [
+                    'session_id' => $sessionId,
+                    'branch_id' => $branchId,
+                    'product_id' => $productId,
+                    'reserve_key' => $reserveKey,
+                    'reserved_quantity' => $reservedQuantity
+                ]);
                 if ($reservedQuantity > 0) {
                     $reservedKey = $this->getReservedKey($branchId, $productId);
                     Redis::connection('stock')->decrby($reservedKey, $reservedQuantity);
                     Redis::connection('stock')->del($reserveKey);
+                    \Log::info('[ClearCart] Reserva removida do total reservado', [
+                        'reserved_key' => $reservedKey,
+                        'decrementado' => $reservedQuantity
+                    ]);
                 }
-                
+
                 // Recalcula o reservado total considerando apenas reservas ativas (por filial)
                 $pattern = "reserve:*:{$branchId}:{$productId}";
                 $keys = Redis::connection('stock')->keys($pattern);
@@ -460,8 +521,24 @@ class CheckoutController extends Controller
                     }
                 }
                 $reservedKey = $this->getReservedKey($branchId, $productId);
-                Redis::connection('stock')->set($reservedKey, $totalActive);
+                // Se não houver reservas ativas OU não houver nenhuma chave, zera o reservado
+                if ($totalActive === 0 || count($keys) === 0) {
+                    Redis::connection('stock')->set($reservedKey, 0);
+                    \Log::info('[ClearCart] Nenhuma reserva ativa ou chave, reservado zerado', [
+                        'reserved_key' => $reservedKey
+                    ]);
+                } else {
+                    Redis::connection('stock')->set($reservedKey, $totalActive);
+                    \Log::info('[ClearCart] Recalculando reservado total', [
+                        'reserved_key' => $reservedKey,
+                        'total_active' => $totalActive
+                    ]);
+                }
                 $this->registrarAtualizacaoEstoque($productId, 'stock_change');
+                \Log::info('[ClearCart] Estoque atualizado', [
+                    'product_id' => $productId,
+                    'branch_id' => $branchId
+                ]);
             }
         }
         
@@ -475,7 +552,7 @@ class CheckoutController extends Controller
      * ✅ Obter estoque de todos os produtos com tratamento de erros
      * Agora com suporte a filtro por filial
      */
-    public function getAllProductsStock(Request $request)
+   public function getAllProductsStock(Request $request)
     {
         try {
             // Query base: produtos ativos
@@ -512,15 +589,14 @@ class CheckoutController extends Controller
                         if (!$branchStock) {
                             continue; // Pula se não tem estoque nessa filial
                         }
-                        $redisStock = $branchStock->quantity;
+                        $stockKey = $this->getStockKey($branchId, $product->id);
                         $reservedKey = $this->getReservedKey($branchId, $product->id);
+                        $redisStock = Redis::connection('stock')->get($stockKey);
+                        if ($redisStock === null) {
+                            $redisStock = $branchStock->quantity;
+                            Redis::connection('stock')->set($stockKey, $redisStock);
+                        }
                         $reservedStock = Redis::connection('stock')->get($reservedKey) ?? 0;
-                        \Log::info('[getAllProductsStock] Valor reserva por filial', [
-                            'reservedKey' => $reservedKey,
-                            'reservedStock' => $reservedStock,
-                            'branch_id' => $branchId,
-                            'product_id' => $product->id
-                        ]);
                     } else {
                         // Sem filtro de filial: usa lógica Redis original
                         if ($redisAvailable) {
@@ -562,6 +638,7 @@ class CheckoutController extends Controller
                         'created_at' => $product->created_at,
                         'updated_at' => $product->updated_at
                     ];
+                 
                 } catch (\Exception $e) {
                     \Log::error("Erro ao processar produto em getAllProductsStock", [
                         'product_id' => $product->id,
@@ -576,7 +653,6 @@ class CheckoutController extends Controller
             return response()->json(['error' => 'Erro ao buscar produtos'], 500);
         }
     }
-
     /**
      * ✅ Obter estoque de produto específico
      */
@@ -613,14 +689,26 @@ class CheckoutController extends Controller
                 Redis::connection('stock')->set($stockKey, $redisStock);
             }
             
-            $reservedStock = Redis::connection('stock')->get($reservedKey) ?? 0;
-            $availableStock = (int)$redisStock - (int)$reservedStock;
+            // Recalcular reservado somando apenas reservas ativas (TTL > 0)
+            $pattern = "reserve:*:{$branchId}:{$id}";
+            $keys = Redis::connection('stock')->keys($pattern);
+            $reservedActive = 0;
+            foreach ($keys as $key) {
+                $ttl = Redis::connection('stock')->ttl($key);
+                $qty = Redis::connection('stock')->get($key);
+                if ($ttl > 0 && $qty > 0) {
+                    $reservedActive += $qty;
+                }
+            }
+            // Atualiza o reservado total no Redis
+            Redis::connection('stock')->set($reservedKey, $reservedActive);
+            $availableStock = (int)$redisStock - (int)$reservedActive;
 
             return response()->json([
                 'product_id' => $id,
                 'branch_id' => $branchId,
                 'quantity' => (int)$redisStock,
-                'reserved' => (int)$reservedStock,
+                'reserved' => (int)$reservedActive,
                 'available' => max(0, $availableStock),
                 'in_stock' => $availableStock > 0
             ]);
@@ -704,6 +792,7 @@ class CheckoutController extends Controller
         ]);
 
         $sessionId = $data['session_id'];
+        $branchId = $data['branch_id'];
         $cartKey = "cart:{$sessionId}";
         $cartData = Redis::connection('stock')->get($cartKey);
 
@@ -715,6 +804,9 @@ class CheckoutController extends Controller
 
         $cart = json_decode($cartData, true);
         // Garante que as chaves do carrinho são inteiras
+        // Soma dos produtos vendidos (orders confirmados ou completados)
+        // $branchId já está definido acima, garantindo que não haverá erro de variável indefinida
+        // ...existing code...
         $cart = array_combine(
             array_map('intval', array_keys($cart)),
             array_values($cart)
@@ -733,15 +825,18 @@ class CheckoutController extends Controller
                 $branchId = $data['branch_id'];
                 $stockKey = $this->getStockKey($branchId, $productId);
                 $reservedKey = $this->getReservedKey($branchId, $productId);
+
                 $currentStock = Redis::connection('stock')->get($stockKey);
                 if ($currentStock === null) {
                     $productStock = \App\Models\ProductStock::where('product_id', $productId)
                         ->where('branch_id', $branchId)
                         ->first();
                     $currentStock = $productStock ? $productStock->quantity : 0;
+                    Redis::connection('stock')->set($stockKey, $currentStock);
                 }
                 $reservedStock = Redis::connection('stock')->get($reservedKey) ?? 0;
                 $availableStock = max(0, (int)$currentStock - (int)$reservedStock);
+
                 // Limitar quantidade ao disponível
                 $finalQuantity = min($requestedQuantity, $availableStock);
                 if ($finalQuantity <= 0) {
@@ -758,6 +853,7 @@ class CheckoutController extends Controller
                 $totalAmount += $totalPrice;
             }
         }
+        // ...existing code...
         if (empty($orderItems)) {
             return response()->json(['message' => 'Nenhum item disponível em estoque para finalizar o pedido.'], 400);
         }
@@ -793,8 +889,8 @@ class CheckoutController extends Controller
                 ]);
             }
 
-            // Limpar carrinho
-            Redis::connection('stock')->del($cartKey);
+            // NÃO remover o carrinho imediatamente após o checkout PIX
+            // O carrinho será removido após o pagamento ou expiração (via job ExpireCheckoutJob)
 
             // Criar registro de pagamento
             $payment = Payment::create([
@@ -839,12 +935,18 @@ class CheckoutController extends Controller
             DB::commit();
 
             \Log::info('[Checkout] Pedido e pagamento PIX criados com sucesso', ['order_id' => $order->id, 'payment_id' => $payment->id]);
+            // Extrai a URL do QR Code, mesmo se estiver dentro de response_api
+            $pixQrCodeUrl = $pixResponse['QrCode'] ?? $pixResponse['qr_code'] ?? $pixResponse['qrcode'] ?? null;
+            if (!$pixQrCodeUrl && isset($pixResponse['response_api']['QrCode'])) {
+                $pixQrCodeUrl = $pixResponse['response_api']['QrCode'];
+            }
             return response()->json([
                 'message' => 'Pedido e pagamento PIX criados com sucesso',
                 'order_id' => $order->id,
                 'order' => $order->load('items'),
                 'payment' => $payment,
                 'pix_qr_code_base64' => $pixResponse['QrCode'] ?? $pixResponse['qr_code'] ?? $pixResponse['qrcode'] ?? null,
+                'pix_qr_code_url' => $pixQrCodeUrl,
                 'pix_copia_e_cola' => $pixResponse['codePIX'] ?? $pixResponse['pix_copia_e_cola'] ?? $pixResponse['qrcode_text'] ?? null,
                 'pix' => $pixResponse,
                 'checkout_expires_in_minutes' => 15
@@ -970,7 +1072,6 @@ class CheckoutController extends Controller
     }
 
         private function registrarAtualizacaoEstoque($productId, $tipo = 'stock_change') {
-        // Buscar branchId se disponível
         $branchId = request()->input('branch_id') ?? request()->query('branch_id');
         if ($branchId) {
             $totalStock = Redis::connection('stock')->get($this->getStockKey($branchId, $productId)) ?? 0;

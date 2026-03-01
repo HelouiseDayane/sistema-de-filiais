@@ -16,6 +16,7 @@ RUN apt-get update && apt-get install -y \
     libzip-dev \
     zip \
     netcat-openbsd \
+    redis-tools \
     && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip
 
 # Instalação do Redis (phpredis via PECL)

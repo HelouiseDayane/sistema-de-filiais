@@ -231,7 +231,7 @@ export function Cart() {
       <Alert className="border-2 border-blue-500 bg-blue-50">
         <Clock className="h-4 w-4 text-blue-600" />
         <AlertDescription className="font-medium text-blue-800">
-          ⏰ <strong>Importante:</strong> Você tem apenas <strong>3 minutos</strong> para finalizar sua compra após adicionar itens ao carrinho. 
+          ⏰ <strong>Importante:</strong> Você tem apenas <strong>5 minutos</strong> para finalizar sua compra após adicionar itens ao carrinho. 
           Depois desse tempo, o carrinho será limpo automaticamente e você precisará selecionar os produtos novamente.
         </AlertDescription>
       </Alert>

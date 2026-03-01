@@ -345,65 +345,71 @@ class OrderAdminController extends Controller {
         }
 
         foreach ($orders as $order) {
-            $order->update(['status' => 'completed']);
-            $updatedCount++;
+                $order->update(['status' => 'completed']);
+                $updatedCount++;
 
-            // Monta mensagem personalizada
-            $msg = "Ei, aqui é o Bruno Miranda Cake! 😄\n";
-            $msg .= "Boa notícia: seu pedido tá prontinho!\n\n";
-            $msg .= "Pode vir buscar ou mandar um moto Uber pra pegar, blz?\n\n";
-            $msg .= "Qualquer coisa, é só chamar! 🍰\n\n";
-            $msg .= "📍Segue link com a localização ⤵️\n";
-            if ($addressText) {
-                $msg .= $addressText . "\n";
-            }
-            if ($mapsLink) {
-                $msg .= $mapsLink . "\n";
-            }
-
-            // Envia WhatsApp via ZapSrv
-            if ($order->customer_phone) {
-                try {
-                    // Limpa o número para formato internacional (apenas números)
-                    $cleanNumber = preg_replace('/\D/', '', $order->customer_phone);
-                    // Se começar com 55, ok. Se não, adiciona DDI Brasil
-                    if (strpos($cleanNumber, '55') !== 0) {
-                        $cleanNumber = '55' . $cleanNumber;
+                // Buscar branch do pedido
+                $branch = \App\Models\Branch::find($order->branch_id);
+                // Buscar endereço ativo da filial
+                $activeAddress = \App\Models\Address::where('ativo', true)
+                    ->where('branch_id', $order->branch_id)
+                    ->first();
+                $addressText = '';
+                $mapsLink = '';
+                $horarios = '';
+                if ($activeAddress) {
+                    $addressText = $activeAddress->rua . ', ' . $activeAddress->numero . ' - ' . $activeAddress->bairro . ', ' . $activeAddress->cidade . ' - ' . $activeAddress->estado;
+                    if ($activeAddress->latitude && $activeAddress->longitude) {
+                        $mapsLink = 'https://www.google.com/maps/search/?api=1&query=' . $activeAddress->latitude . ',' . $activeAddress->longitude;
                     }
-                    $body = [
-                        'number' => $cleanNumber,
-                        'text' => $msg,
-                        'options' => [
-                            'server' => 'https://evo01.zapsrv.com/message/sendText/BRUNO-CAKE',
-                            'wait' => 500,
-                            'delay' => 1000,
-                            'presence' => 'composing'
-                        ]
-                    ];
-                    $response = \Illuminate\Support\Facades\Http::withHeaders([
-                        'apikey' => '695D24189F61-408A-8E03-9917CE36FA1C',
-                    ])->post('https://01.zapsrv.com/zap_request/', $body);
-                    Log::info('Mensagem WhatsApp enviada', [
-                        'order_id' => $order->id,
-                        'phone' => $cleanNumber,
-                        'zap_status' => $response->status(),
-                        'zap_body' => $response->body(),
-                        'zap_json' => $response->json()
-                    ]);
-                } catch (\Exception $e) {
-                    Log::error('Erro ao enviar WhatsApp', [
-                        'order_id' => $order->id,
-                        'phone' => $order->customer_phone,
-                        'error' => $e->getMessage()
-                    ]);
+                    $horarios = $activeAddress->horarios;
                 }
-            }
 
-            Log::info('Pedido marcado como completo', [
-                'order_id' => $order->id,
-                'customer' => $order->customer_name,
-                'total' => $order->total_amount
-            ]);
+                // Monta mensagem personalizada para o cliente
+                $msg = "Ei, aqui é o Bruno Miranda Cake! 😄\n";
+                $msg .= "Boa notícia: seu pedido tá prontinho!\n\n";
+                $msg .= "Pode vir buscar ou mandar um moto Uber pra pegar, blz?\n\n";
+                $msg .= "Qualquer coisa, é só chamar! 🍰\n\n";
+                $msg .= "📍 Endereço de retirada:\n";
+                if ($addressText) {
+                    $msg .= $addressText . "\n";
+                }
+                if ($horarios) {
+                    $msg .= "Horário: " . $horarios . "\n";
+                }
+                if ($mapsLink) {
+                    $msg .= "Localização: " . $mapsLink . "\n";
+                }
+
+                // Envia WhatsApp via EvolutionApiService
+                if ($order->customer_phone && $branch && $branch->whatsapp_instance_name) {
+                    try {
+                        $cleanNumber = preg_replace('/\D/', '', $order->customer_phone);
+                        if (strpos($cleanNumber, '55') !== 0) {
+                            $cleanNumber = '55' . $cleanNumber;
+                        }
+                        $evoApi = new \App\Services\EvolutionApiService();
+                        $result = $evoApi->sendTextMessage($branch->whatsapp_instance_name, $cleanNumber, $msg);
+                        Log::info('Mensagem WhatsApp retirada enviada', [
+                            'order_id' => $order->id,
+                            'phone' => $cleanNumber,
+                            'instance' => $branch->whatsapp_instance_name,
+                            'result' => $result
+                        ]);
+                    } catch (\Exception $e) {
+                        Log::error('Erro ao enviar WhatsApp retirada', [
+                            'order_id' => $order->id,
+                            'phone' => $order->customer_phone,
+                            'error' => $e->getMessage()
+                        ]);
+                    }
+                }
+
+                Log::info('Pedido marcado como completo', [
+                    'order_id' => $order->id,
+                    'customer' => $order->customer_name,
+                    'total' => $order->total_amount
+                ]);
         }
 
         Log::info('Pedidos marcados como completos', [
