@@ -471,80 +471,57 @@ class CheckoutController extends Controller
     {
         $cartKey = "cart:{$sessionId}";
         $cartData = Redis::connection('stock')->get($cartKey);
-        
-        if ($cartData) {
-            Log::info('[Carrinho] Limpando carrinho', [
-                'session_id' => $sessionId,
-                'cartKey' => $cartKey,
-                'timestamp' => now()->toDateTimeString()
-            ]);
-            $cart = json_decode($cartData, true);
-            // Liberar todas as reservas e recalcular reservado total (por filial)
-            // Disparar Jobs de expiração e sincronização
-            \App\Jobs\ExpireCartJob::dispatch($sessionId, $productId, $reservedQuantity);
-            \App\Jobs\SyncStockJob::dispatch($branchId, $productId);
-            foreach ($cart as $productId => $item) {
-                $branchId = $item['branch_id'] ?? null;
-                if (!$branchId) {
-                    \Log::warning("[ClearCart] Item sem branch_id", ['product_id' => $productId]);
-                    continue;
-                }
 
-                $reserveKey = $this->getReservationKey($sessionId, $branchId, $productId);
-                $reservedQuantity = Redis::connection('stock')->get($reserveKey) ?? 0;
-                \Log::info('[ClearCart] Liberando reserva individual', [
+        // Busca todas as reservas do sessionId, mesmo sem carrinho
+        $pattern = "reserve:{$sessionId}:*:*";
+        $reserveKeys = Redis::connection('stock')->keys($pattern);
+        foreach ($reserveKeys as $reserveKey) {
+            // Extrai branchId e productId da chave
+            $parts = explode(':', $reserveKey);
+            $branchId = $parts[2] ?? null;
+            $productId = $parts[3] ?? null;
+            $reservedQuantity = Redis::connection('stock')->get($reserveKey) ?? 0;
+            if ($branchId && $productId && $reservedQuantity > 0) {
+                $reservedKey = $this->getReservedKey($branchId, $productId);
+                Redis::connection('stock')->decrby($reservedKey, $reservedQuantity);
+                Redis::connection('stock')->del($reserveKey);
+                \Log::info('[ClearCart] Reserva removida do total reservado (busca global)', [
+                    'reserved_key' => $reservedKey,
+                    'decrementado' => $reservedQuantity,
                     'session_id' => $sessionId,
                     'branch_id' => $branchId,
-                    'product_id' => $productId,
-                    'reserve_key' => $reserveKey,
-                    'reserved_quantity' => $reservedQuantity
+                    'product_id' => $productId
                 ]);
-                if ($reservedQuantity > 0) {
-                    $reservedKey = $this->getReservedKey($branchId, $productId);
-                    Redis::connection('stock')->decrby($reservedKey, $reservedQuantity);
-                    Redis::connection('stock')->del($reserveKey);
-                    \Log::info('[ClearCart] Reserva removida do total reservado', [
-                        'reserved_key' => $reservedKey,
-                        'decrementado' => $reservedQuantity
-                    ]);
-                }
+            }
+        }
 
-                // Recalcula o reservado total considerando apenas reservas ativas (por filial)
-                $pattern = "reserve:*:{$branchId}:{$productId}";
-                $keys = Redis::connection('stock')->keys($pattern);
+        // Após remover todas as reservas da sessão, força zerar o reserved_stock se não houver reservas ativas
+        $allProductIds = \DB::table('products')->pluck('id');
+        $allBranchIds = \DB::table('branches')->pluck('id');
+        foreach ($allProductIds as $productId) {
+            foreach ($allBranchIds as $branchId) {
+                $reservedKey = $this->getReservedKey($branchId, $productId);
+                $patternBranch = "reserve:*:{$branchId}:{$productId}";
+                $keysBranch = Redis::connection('stock')->keys($patternBranch);
                 $totalActive = 0;
-                foreach ($keys as $key) {
+                foreach ($keysBranch as $key) {
                     $ttl = Redis::connection('stock')->ttl($key);
                     $qty = Redis::connection('stock')->get($key);
                     if ($ttl > 0 && $qty > 0) {
                         $totalActive += $qty;
                     }
                 }
-                $reservedKey = $this->getReservedKey($branchId, $productId);
-                // Se não houver reservas ativas OU não houver nenhuma chave, zera o reservado
-                if ($totalActive === 0 || count($keys) === 0) {
+                if ($totalActive === 0 || count($keysBranch) === 0) {
                     Redis::connection('stock')->set($reservedKey, 0);
-                    \Log::info('[ClearCart] Nenhuma reserva ativa ou chave, reservado zerado', [
-                        'reserved_key' => $reservedKey
-                    ]);
                 } else {
                     Redis::connection('stock')->set($reservedKey, $totalActive);
-                    \Log::info('[ClearCart] Recalculando reservado total', [
-                        'reserved_key' => $reservedKey,
-                        'total_active' => $totalActive
-                    ]);
                 }
-                $this->registrarAtualizacaoEstoque($productId, 'stock_change');
-                \Log::info('[ClearCart] Estoque atualizado', [
-                    'product_id' => $productId,
-                    'branch_id' => $branchId
-                ]);
             }
         }
-        
+
         // Remover carrinho
         Redis::connection('stock')->del($cartKey);
-        
+
         return response()->json(['message' => 'Carrinho limpo']);
     }
 
@@ -555,19 +532,24 @@ class CheckoutController extends Controller
    public function getAllProductsStock(Request $request)
     {
         try {
+            // Parâmetros de paginação
+            $page = max(1, (int)$request->query('page', 1));
+            $perPage = max(1, min(100, (int)$request->query('per_page', 20)));
+
             // Query base: produtos ativos
             $query = Product::where('is_active', true)->with('stocks');
-            
+
             // Filtro por filial se fornecido
             $branchId = $request->query('branch_id');
             if ($branchId) {
-                // Filtra produtos que têm estoque nesta filial
                 $query->whereHas('stocks', function($q) use ($branchId) {
                     $q->where('branch_id', $branchId);
                 });
             }
-            
-            $products = $query->get();
+
+            // Paginação
+            $paginator = $query->paginate($perPage, ['*'], 'page', $page);
+            $products = $paginator->items();
             $productsWithStock = [];
             $redisAvailable = true;
 
@@ -583,11 +565,10 @@ class CheckoutController extends Controller
 
             foreach ($products as $product) {
                 try {
-                    // Se filtrou por filial, usa o estoque específico dessa filial
                     if ($branchId) {
                         $branchStock = $product->stocks->where('branch_id', $branchId)->first();
                         if (!$branchStock) {
-                            continue; // Pula se não tem estoque nessa filial
+                            continue;
                         }
                         $stockKey = $this->getStockKey($branchId, $product->id);
                         $reservedKey = $this->getReservedKey($branchId, $product->id);
@@ -596,14 +577,31 @@ class CheckoutController extends Controller
                             $redisStock = $branchStock->quantity;
                             Redis::connection('stock')->set($stockKey, $redisStock);
                         }
-                        $reservedStock = Redis::connection('stock')->get($reservedKey) ?? 0;
+                        $reservedStock = Redis::connection('stock')->get($reservedKey);
+                        // Se vier null, tenta buscar do banco
+                        if ($reservedStock === null && isset($branchStock->reserved_stock)) {
+                            $reservedStock = $branchStock->reserved_stock;
+                        }
+                        if ($reservedStock === null) {
+                            $reservedStock = 0;
+                        }
+                        \Log::info('[DEBUG reserved_stock]', [
+                            'product_id' => $product->id,
+                            'branch_id' => $branchId,
+                            'reservedKey' => $reservedKey,
+                            'reservedStock' => $reservedStock,
+                            'reservedStock_db' => $branchStock->reserved_stock ?? null
+                        ]);
                     } else {
-                        // Sem filtro de filial: usa lógica Redis original
                         if ($redisAvailable) {
                             $redisStock = Redis::get("product_stock_{$product->id}");
-                            $reservedStock = Redis::get("product_reserved_{$product->id}") ?? 0;
-                            
-                            // Se não tem no Redis, sincroniza do MySQL
+                            $reservedStock = Redis::get("product_reserved_{$product->id}");
+                            if ($reservedStock === null && isset($product->reserved_stock)) {
+                                $reservedStock = $product->reserved_stock;
+                            }
+                            if ($reservedStock === null) {
+                                $reservedStock = 0;
+                            }
                             if ($redisStock === null) {
                                 $redisStock = $product->quantity;
                                 Redis::set("product_stock_{$product->id}", $redisStock);
@@ -612,12 +610,18 @@ class CheckoutController extends Controller
                                     'quantity' => $redisStock
                                 ]);
                             }
+                            \Log::info('[DEBUG reserved_stock]', [
+                                'product_id' => $product->id,
+                                'reservedKey' => "product_reserved_{$product->id}",
+                                'reservedStock' => $reservedStock,
+                                'reservedStock_db' => $product->reserved_stock ?? null
+                            ]);
                         } else {
                             $redisStock = $product->quantity;
                             $reservedStock = 0;
                         }
                     }
-                    
+
                     $availableStock = $redisStock - $reservedStock;
 
                     $productsWithStock[] = [
@@ -638,7 +642,6 @@ class CheckoutController extends Controller
                         'created_at' => $product->created_at,
                         'updated_at' => $product->updated_at
                     ];
-                 
                 } catch (\Exception $e) {
                     \Log::error("Erro ao processar produto em getAllProductsStock", [
                         'product_id' => $product->id,
@@ -647,7 +650,14 @@ class CheckoutController extends Controller
                 }
             }
 
-            return response()->json($productsWithStock);
+            // Retorna dados paginados
+            return response()->json([
+                'data' => $productsWithStock,
+                'current_page' => $paginator->currentPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+                'last_page' => $paginator->lastPage(),
+            ]);
         } catch (\Exception $e) {
             \Log::error("Erro crítico em getAllProductsStock: " . $e->getMessage());
             return response()->json(['error' => 'Erro ao buscar produtos'], 500);

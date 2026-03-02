@@ -45,23 +45,46 @@ export const Checkout = () => {
     // Fechar modal e limpar carrinho após pagamento
     useEffect(() => {
       if (paymentSuccess) {
-        // Fecha modal, limpa carrinho e mostra mensagem de sucesso
+        console.log('[Checkout] paymentSuccess TRUE, executando limpeza e fechamento do modal');
         setShowOrderConfirmationModal(false);
         clearCart();
         setPixQrCodeBase64(null);
         setPixCopiaECola(null);
         toast.success('Pagamento efetuado com sucesso! Aguarde, em instantes confirmaremos a entrega no seu WhatsApp.', { duration: 8000 });
+      } else {
+        console.log('[Checkout] paymentSuccess FALSE, aguardando confirmação de pagamento...');
       }
     }, [paymentSuccess]);
 
     // A conexão SSE será controlada pelo RealTimeProvider (autoConnect)
 
     // Atualiza status do pedido ao receber evento SSE
-    const handleOrderStatusUpdate = (data: { order_id: string; status: string }) => {
-      if (data.order_id && Number(data.order_id) === customerData.id && (data.status === 'confirmed' || data.status === 'paid') && !paymentSuccess) {
+    const handleOrderStatusUpdate = async (data: { order_id: string; status: string }) => {
+      console.log('[Checkout] Evento SSE recebido:', data, 'customerData.id:', customerData.id, 'paymentSuccess:', paymentSuccess);
+      if (
+        data.order_id &&
+        Number(data.order_id) === customerData.id &&
+        (data.status === 'confirmed' || data.status === 'paid') &&
+        !paymentSuccess
+      ) {
         console.log('[Checkout] Status de pagamento confirmado recebido via SSE!', data);
         setOrderStatus('confirmed');
         setPaymentSuccess(true);
+
+        // Limpa o carrinho no backend via API
+        const sessionId = localStorage.getItem('bruno_session_id') || '';
+        if (sessionId) {
+          try {
+            await fetch(`/api/cart/session/${sessionId}`, { method: 'DELETE' });
+            console.log('[Checkout] Carrinho limpo no backend após confirmação de pagamento via SSE');
+          } catch (err) {
+            console.error('[Checkout] Erro ao limpar carrinho no backend:', err);
+          }
+        }
+        // Limpa localmente
+        clearCart();
+      } else {
+        console.log('[Checkout] Evento SSE ignorado: order_id não bate ou status não é confirmado/paid ou já está pago.');
       }
     };
   const navigate = useNavigate();

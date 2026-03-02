@@ -232,6 +232,8 @@ function AppProvider({ children }: { children: ReactNode }) {
           ) {
             setCart([]);
             localStorage.removeItem('bruno_cart');
+            // Chama clearCart para liberar estoque no backend
+            await clearCart();
             if (typeof window !== 'undefined') {
               window.dispatchEvent(new CustomEvent('cart-expired', {
                 detail: { message: 'Seu carrinho expirou! Você tem apenas 3 minutos para escolher seus produtos.' }

@@ -38,6 +38,8 @@ const PublicMenu = () => {
     isOpen: false, // Iniciar como fechado até carregar dados reais
     checkoutActive: false, // Iniciar como desativado até carregar dados reais
   });
+  const [pagina, setPagina] = useState(1);
+  const [totalPaginas, setTotalPaginas] = useState(1);
 
   // Padroniza os campos de badge e converte price/promotionPrice para número
   const formatProducts = (Array.isArray(publicProducts) ? publicProducts : []).map((product: any) => {
@@ -167,27 +169,20 @@ const PublicMenu = () => {
 
   // Efeito para buscar produtos (inicial e em atualização de estoque)
   useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        // Importa a publicApi para garantir uso do endpoint correto
-        const { publicApi } = await import('../../api');
-        const branchId = selectedBranch?.id;
-        const products = await publicApi.getPublicProducts(branchId);
-        setPublicProducts(products);
-      } catch (error) {
-        console.error('Erro ao buscar produtos (with-stock):', error);
-      }
-    };
-
-    // Só busca produtos se tiver uma filial selecionada
-    if (selectedBranch) {
-      fetchProducts(); // Busca inicial
-
-      if (lastEvent && lastEvent.type === 'stock_update') {
-        fetchProducts(); // Atualiza no evento de estoque
-      }
+  const fetchProducts = async () => {
+    try {
+      const branchId = selectedBranch?.id;
+      const res = await apiRequest(`/products/with-stock?branch_id=${branchId}&page=${pagina}&per_page=20`);
+      setPublicProducts(res.data); // res.data.data são os produtos
+      setTotalPaginas(res.last_page);
+    } catch (error) {
+      console.error('Erro ao buscar produtos (with-stock):', error);
     }
-  }, [lastEvent, setPublicProducts, selectedBranch]);
+  };
+  if (selectedBranch) {
+    fetchProducts();
+  }
+}, [selectedBranch, pagina]);
 
   // Efeito para buscar dados da filial selecionada (endereço, horário, checkout)
   useEffect(() => {
@@ -355,6 +350,31 @@ const PublicMenu = () => {
     const matchesCategory = categoryFilter === 'all' || product.category === categoryFilter;
     return matchesSearch && matchesCategory;
   });
+const Paginacao = () => (
+  <div className="flex items-center justify-center gap-2 my-4">
+    <Button
+      size="sm"
+      variant="outline"
+      disabled={pagina <= 1}
+      onClick={() => setPagina(pagina - 1)}
+      className="rounded-full px-3"
+    >
+      ←
+    </Button>
+    <span className="text-sm text-muted-foreground">
+      Página <strong>{pagina}</strong> de <strong>{totalPaginas}</strong>
+    </span>
+    <Button
+      size="sm"
+      variant="outline"
+      disabled={pagina >= totalPaginas}
+      onClick={() => setPagina(pagina + 1)}
+      className="rounded-full px-3"
+    >
+      →
+    </Button>
+  </div>
+);
 
     const handleAddToCart = async (product: any, quantity: number = 1) => {
       setIsLoading(true);
@@ -364,17 +384,19 @@ const PublicMenu = () => {
         setLocalQuantity(product.id, 1);
         
         // Atualiza o estoque localmente de forma otimista
-        setPublicProducts(prevProducts => 
-          prevProducts.map(p => {
-            if (String(p.id) === String(product.id)) {
-              const currentAvailable = p.available_stock ?? 0;
-              return {
-                ...p,
-                available_stock: Math.max(0, currentAvailable - quantity)
-              };
-            }
-            return p;
-          })
+        setPublicProducts(
+          Array.isArray(publicProducts)
+            ? publicProducts.map(p => {
+                if (String(p.id) === String(product.id)) {
+                  const currentAvailable = p.available_stock ?? 0;
+                  return {
+                    ...p,
+                    available_stock: Math.max(0, currentAvailable - quantity)
+                  };
+                }
+                return p;
+              })
+            : []
         );
         
       } catch (error) {
@@ -514,6 +536,7 @@ const PublicMenu = () => {
       </div>
 
       {/* Products Grid */}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredProducts.map((product: any) => {
           const availableStock = getProductAvailableStock(product.id);
@@ -735,6 +758,7 @@ const PublicMenu = () => {
           );
         })}
       </div>
+      <Paginacao />
 
       {/* Empty State */}
       {filteredProducts.length === 0 && (

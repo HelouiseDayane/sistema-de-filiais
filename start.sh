@@ -106,9 +106,14 @@ docker compose exec -T backend chown -R www-data:www-data /var/www/html/storage 
 docker compose exec -T backend chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache 2>/dev/null || true
 
 
+
 # Executar scheduler Laravel
 echo -e "${BLUE}ℹ Iniciando scheduler Laravel...${NC}"
-docker-compose exec queue php artisan schedule:run &
+docker compose exec -T backend php artisan schedule:run &
+
+# Iniciar worker da fila Laravel (jobs)
+echo -e "${BLUE}ℹ Iniciando worker de fila Laravel...${NC}"
+docker compose exec -T backend nohup php artisan queue:work redis --sleep=1 --tries=3 > /dev/null 2>&1 &
 
 # Limpar cache
 echo -e "${BLUE}ℹ Limpando cache...${NC}"
