@@ -38,7 +38,7 @@ export const publicApi = {
       session_id: data.session_id || '',
     };
     
-    console.log('📦 Payload sendo enviado para checkout:', payload);
+    
     
     return apiRequest(PUBLIC_API_ENDPOINTS.checkout.create, {
       method: 'POST',

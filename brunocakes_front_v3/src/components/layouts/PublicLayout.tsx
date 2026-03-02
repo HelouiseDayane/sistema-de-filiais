@@ -53,7 +53,7 @@ export const PublicLayout = () => {
 
     const validateSavedBranch = async () => {
       const savedBranch = localStorage.getItem('selected_branch');
-      console.log('🔍 Validando filial salva:', savedBranch);
+     
 
       if (!savedBranch) {
         validated = true;
@@ -63,21 +63,20 @@ export const PublicLayout = () => {
 
       try {
         const parsed = JSON.parse(savedBranch);
-        console.log('📦 Filial parseada:', parsed);
+       
 
         // Validar se a filial ainda existe e está ativa
         const branchesResponse = await apiRequest('/branches');
         const branchList = Array.isArray(branchesResponse) ? branchesResponse : [];
-        console.log('🏪 Filiais disponíveis:', branchList);
+      
 
         const branchExists = branchList.find((b: any) => b.id === parsed.id && b.is_active !== false);
-        console.log('✓ Filial existe?', branchExists);
+        
 
         if (branchExists) {
           validated = true;
           setSelectedBranch(parsed);
           setShowBranchModal(false);
-          console.log('✅ Filial válida, modal fechado');
         } else {
           validated = true;
           localStorage.removeItem('selected_branch');

@@ -438,12 +438,11 @@ class ProductAdminController extends Controller
 
         $product = Product::findOrFail($id);
         $oldStock = $product->quantity;
-        
-        $product->update(['quantity' => $data['quantity']]);
-        
-        // ✅ CORRIGIDO: Sincronizar estoque com Redis automaticamente
+        // Atualiza apenas a quantidade, sem alterar is_active
+        $product->quantity = $data['quantity'];
+        $product->save();
+        // Sincronizar estoque com Redis
         $this->syncProductStock($product->fresh());
-        
         return response()->json([
             'message' => 'Estoque atualizado com sucesso',
             'product' => $product->fresh(),

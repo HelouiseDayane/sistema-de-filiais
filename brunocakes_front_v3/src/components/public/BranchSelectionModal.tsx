@@ -42,7 +42,7 @@ export function BranchSelectionModal({
   const [selectedBranch, setSelectedBranch] = useState<BranchWithAddress | null>(null);
 
   // Log para debug
-  console.log('🎭 BranchSelectionModal renderizado:', { open, allowClose, branches: branches.length });
+  //console.log('🎭 BranchSelectionModal renderizado:', { open, allowClose, branches: branches.length });
 
   useEffect(() => {
     if (open) {

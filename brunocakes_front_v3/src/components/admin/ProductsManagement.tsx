@@ -49,23 +49,18 @@ interface Product {
 // Função auxiliar para converter is_active para boolean real
 const isProductActive = (product: Product): boolean => {
   const value = product.is_active;
-  
-  // Se já é boolean, retorna direto
-  if (typeof value === 'boolean') {
-    return value;
+  if (value === true || value === 'true' || value === 1 || value === '1' || value === 'yes') return true;
+  if (value === false || value === 'false' || value === 0 || value === '0' || value === 'no') return false;
+  // Se for string, tenta converter para boolean
+  if (typeof value === 'string') {
+    const str = value.toLowerCase().trim();
+    if (str === 'true' || str === '1' || str === 'yes') return true;
+    if (str === 'false' || str === '0' || str === 'no') return false;
   }
-  
-  // Se é número, considera 1 como true e 0 como false
+  // Se for number, considera 1 como true
   if (typeof value === 'number') {
     return value === 1;
   }
-  
-  // Se é string, verifica valores comuns
-  if (typeof value === 'string') {
-    const str = value.toLowerCase().trim();
-    return str === '1' || str === 'true' || str === 'yes';
-  }
-  
   // Fallback: considera falso
   return false;
 };
@@ -79,6 +74,7 @@ import { toast } from 'sonner';
 import { Plus, Edit, Search, Package, Calendar, Star, Percent, AlertTriangle, RefreshCw } from 'lucide-react';
 
 export function ProductsManagement() {
+    const [isSaving, setIsSaving] = useState(false);
   const { adminProducts, setAdminProducts, refreshProducts } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -168,7 +164,11 @@ export function ProductsManagement() {
   // Admin deve ver todos os produtos, inclusive inativos
   useEffect(() => {
     adminApi.getProducts().then((products) => {
+      
       setAdminProducts(products);
+      setTimeout(() => {
+    
+      }, 200);
     });
   }, []); // Executar apenas uma vez ao montar o componente
   const filteredProducts = adminProducts.filter((product: any) => {
@@ -191,6 +191,7 @@ export function ProductsManagement() {
       expiryDate: '',
       isPromotion: false,
       isNew: false,
+      branch_id: isMaster ? undefined : userBranchId,
     });
     setEditingProduct(null);
     
@@ -207,7 +208,6 @@ export function ProductsManagement() {
   };
 
   const handleEdit = (product: any) => {
-    setEditingProduct(product);
     setFormData({
       name: product.name || '',
       description: product.description || '',
@@ -220,7 +220,9 @@ export function ProductsManagement() {
       expiryDate: (product.expiryDate || product.expires_at) ? new Date(product.expiryDate || product.expires_at).toISOString().split('T')[0] : '',
       isPromotion: product.isPromotion || product.is_promo || false,
       isNew: product.isNew || product.is_new || false,
+      branch_id: isMaster ? undefined : userBranchId,
     });
+    setEditingProduct(product); // Corrige: marca produto como sendo editado
     setIsDialogOpen(true);
   };
 
@@ -268,6 +270,7 @@ const handleSubmit = async (e: React.FormEvent) => {
   if (formData.expiryDate) productData.expires_at = formData.expiryDate;
   if (formData.file) productData.file = formData.file;
 
+  setIsSaving(true);
   try {
     if (editingProduct) {
       // Atualiza produto existente
@@ -288,11 +291,13 @@ const handleSubmit = async (e: React.FormEvent) => {
       toast.success('Produto criado com sucesso em todas as filiais!');
     }
     // Refaz o fetch da lista de produtos após criar/editar
-    await refreshProducts();
+    await refreshProducts(); // Atualiza apenas a lista de produtos
     resetForm();
     setIsDialogOpen(false);
+    setIsSaving(false);
   } catch (error: any) {
     toast.error(`Erro ao salvar produto: ${error?.message || 'Desconhecido'}`);
+    setIsSaving(false);
   }
 };
 
@@ -325,18 +330,7 @@ const handleSubmit = async (e: React.FormEvent) => {
       
       // Atualizar com os dados retornados pelo backend
       if (result && result.product) {
-        const finalProducts = adminProducts.map(product => {
-          if (product.id === productId) {
-            return {
-              ...product,
-              ...result.product,
-              is_active: result.product.is_active,
-              available: result.product.is_active
-            };
-          }
-          return product;
-        });
-        setAdminProducts(finalProducts);
+        await refreshProducts();
       }
       
       toast.success(`Produto ${newStatus ? 'ativado' : 'desativado'} com sucesso!`);
@@ -372,7 +366,6 @@ const handleSubmit = async (e: React.FormEvent) => {
 
   const handleQuickStockUpdate = async (productId: string, newStock: number) => {
     try {
-  // ...
       await adminApi.updateProductStock(productId, newStock);
       await refreshProducts();
       toast.success('Estoque atualizado com sucesso!');
@@ -680,8 +673,8 @@ const handleSubmit = async (e: React.FormEvent) => {
               </div>
 
               <div className="flex gap-2 pt-4">
-                <Button type="submit" className="flex-1">
-                  {editingProduct ? 'Atualizar' : 'Adicionar'} Doce
+                <Button type="submit" className="flex-1" disabled={isSaving}>
+                  {isSaving ? 'Aguarde...' : (editingProduct ? 'Atualizar' : 'Adicionar Doce')}
                 </Button>
                 <Button 
                   type="button" 
@@ -828,9 +821,12 @@ const handleSubmit = async (e: React.FormEvent) => {
                       <Package className="h-4 w-4 text-muted-foreground" />
                       <div className="flex flex-col">
                         <span className="font-medium">
-                          {product.stocks?.reduce((sum: number, stock: any) => sum + stock.quantity, 0) || product.stock || product.quantity || 0}
+                          {isMaster
+                            ? (product.stocks?.reduce((sum: number, stock: any) => sum + stock.quantity, 0) || product.stock || product.quantity || 0)
+                            : (product.stocks?.find((stock: any) => stock.branch_id === userBranchId)?.quantity ?? 0)
+                          }
                         </span>
-                        {product.stocks && product.stocks.length > 0 && (
+                        {isMaster && product.stocks && product.stocks.length > 0 && (
                           <span className="text-xs text-muted-foreground">
                             {product.stocks.length} {product.stocks.length === 1 ? 'filial' : 'filiais'}
                           </span>
@@ -859,13 +855,13 @@ const handleSubmit = async (e: React.FormEvent) => {
                         aria-label={`${isProductActive(product) ? 'Desativar' : 'Ativar'} produto`}
                       />
                       <Badge 
-                        variant={isProductActive(product) ? 'default' : 'secondary'}
-                        className={isProductActive(product) ? 'bg-green-100 text-green-800 hover:bg-green-200' : 'bg-red-100 text-red-800 hover:bg-red-200'}
+                        variant={product.is_active ? 'default' : 'secondary'}
+                        className={product.is_active ? 'bg-green-100 text-green-800 hover:bg-green-200' : 'bg-red-100 text-red-800 hover:bg-red-200'}
                       >
-                        {isProductActive(product) ? 'Ativo' : 'Inativo'}
+                        {product.is_active ? 'Ativo' : 'Inativo'}
                       </Badge>
                       <span className="text-xs text-muted-foreground">
-                        (Clique para {isProductActive(product) ? 'desativar' : 'ativar'})
+                        (Clique para {product.is_active ? 'desativar' : 'ativar'})
                       </span>
                     </div>
                   </TableCell>
@@ -906,15 +902,16 @@ const handleSubmit = async (e: React.FormEvent) => {
           key={`stock-modal-${selectedProductForStock.id}-${refreshKey}`}
           open={stockModalOpen}
           onClose={async () => {
+            await refreshProducts(); // Atualiza tabela ao fechar modal
             setStockModalOpen(false);
             setSelectedProductForStock(null);
-            await refreshProducts(); // Atualizar lista após fechar modal
             setRefreshKey(prev => prev + 1); // Forçar re-renderização
           }}
           productId={selectedProductForStock.id}
           productName={selectedProductForStock.name}
           userRole={currentAdmin?.role || 'employee'}
           userBranchId={userBranchId}
+          refreshProducts={refreshProducts}
         />
       )}
     </div>

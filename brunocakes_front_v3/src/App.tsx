@@ -452,9 +452,8 @@ function AppProvider({ children }: { children: ReactNode }) {
     try {
       if (isAdminAuthenticated) {
         const productsFromApi = await adminApi.getProducts();
-        console.log('🔄 Produtos recebidos da API:', productsFromApi);
         const mappedProducts = Array.isArray(productsFromApi) ? productsFromApi.map(mapProductFromBackend) : [];
-        console.log('📦 Produtos mapeados:', mappedProducts);
+     
         if (mappedProducts.length > 0) {
           setProducts(mappedProducts);
           setAdminProducts(mappedProducts); // Atualiza também adminProducts
@@ -583,7 +582,7 @@ function AppProvider({ children }: { children: ReactNode }) {
     
     // Conversão segura de is_active para boolean
     const isActive = p.is_active === true || p.is_active === 1 || p.is_active === '1' || p.is_active === 'true';
-    
+
     return {
       id: String(p.id),
       name: p.name || '',
@@ -594,6 +593,7 @@ function AppProvider({ children }: { children: ReactNode }) {
       image: p.image || '',
       imageUrl: getProductImageUrl(p.image_url || p.image),
       available: isActive,
+      is_active: p.is_active, // Preserva o campo original do backend
       stock: stockValue,
       quantity: p.quantity !== undefined ? (typeof p.quantity === 'string' ? parseInt(p.quantity, 10) : Number(p.quantity)) : 0,
       expiryDate: p.expires_at ? p.expires_at.split(' ')[0] : '',

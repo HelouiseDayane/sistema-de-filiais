@@ -270,7 +270,7 @@ class CheckoutController extends Controller
             'message' => 'Produto adicionado ao carrinho',
             'cart_item' => $cartItemResponse,
             'available_stock' => $availableStock - $quantity,
-            'cart_expires_in_minutes' => 10,
+            'cart_expires_in_minutes' => 5,
             'debug_job_dispatched' => true
         ], 201);
     }
@@ -930,7 +930,7 @@ class CheckoutController extends Controller
 
             // Agendar expiração do checkout
             ExpireCheckoutJob::dispatch($order->id)
-                ->delay(now()->addMinutes(15));
+                ->delay(now()->addMinutes(10));
 
             DB::commit();
 
@@ -949,7 +949,7 @@ class CheckoutController extends Controller
                 'pix_qr_code_url' => $pixQrCodeUrl,
                 'pix_copia_e_cola' => $pixResponse['codePIX'] ?? $pixResponse['pix_copia_e_cola'] ?? $pixResponse['qrcode_text'] ?? null,
                 'pix' => $pixResponse,
-                'checkout_expires_in_minutes' => 15
+                'checkout_expires_in_minutes' => 5
             ], 201);
         } catch (\Exception $e) {
             DB::rollback();

@@ -381,23 +381,36 @@ class OrderAdminController extends Controller {
                     $msg .= "Localização: " . $mapsLink . "\n";
                 }
 
-                // Envia WhatsApp via EvolutionApiService
+                // Envia WhatsApp via Evolution API HTTP POST direto (modelo curl)
                 if ($order->customer_phone && $branch && $branch->whatsapp_instance_name) {
                     try {
                         $cleanNumber = preg_replace('/\D/', '', $order->customer_phone);
                         if (strpos($cleanNumber, '55') !== 0) {
                             $cleanNumber = '55' . $cleanNumber;
                         }
-                        $evoApi = new \App\Services\EvolutionApiService();
-                        $result = $evoApi->sendTextMessage($branch->whatsapp_instance_name, $cleanNumber, $msg);
-                        Log::info('Mensagem WhatsApp retirada enviada', [
+                        $evolutionApiUrl = env('EVOLUTION_API_URL', 'https://evohelo.zapsrv.com');
+                        $apikey = env('EVOLUTION_API_KEY');
+                        $url = $evolutionApiUrl . "/message/sendText/{$branch->whatsapp_instance_name}";
+                        $payload = [
+                            'number' => $cleanNumber,
+                            'text' => $msg
+                        ];
+                        Log::info('Enviando mensagem Evolution API para cliente (markAsCompleted)', [
+                            'url' => $url,
+                            'payload' => $payload,
                             'order_id' => $order->id,
-                            'phone' => $cleanNumber,
-                            'instance' => $branch->whatsapp_instance_name,
-                            'result' => $result
+                            'branch_id' => $branch->id
+                        ]);
+                        $response = \Illuminate\Support\Facades\Http::withHeaders([
+                            'Content-Type' => 'application/json',
+                            'apikey' => $apikey
+                        ])->post($url, $payload);
+                        Log::info('Resposta Evolution API cliente (markAsCompleted)', [
+                            'status' => $response->status(),
+                            'body' => $response->body(),
                         ]);
                     } catch (\Exception $e) {
-                        Log::error('Erro ao enviar WhatsApp retirada', [
+                        Log::error('Erro ao enviar WhatsApp retirada (markAsCompleted)', [
                             'order_id' => $order->id,
                             'phone' => $order->customer_phone,
                             'error' => $e->getMessage()

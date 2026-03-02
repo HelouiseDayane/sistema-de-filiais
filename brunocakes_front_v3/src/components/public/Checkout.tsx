@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useRealTime } from '../../hooks/useRealTime';
 import { Copy } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../ui/button';
@@ -28,6 +29,41 @@ interface CustomerData {
 }
 
 export const Checkout = () => {
+    const { connect, disconnect } = useRealTime();
+    const [orderStatus, setOrderStatus] = useState<string>('pending_payment');
+    const [paymentSuccess, setPaymentSuccess] = useState(false);
+      const [customerData, setCustomerData] = useState<CustomerData>({
+        id: 0,
+        name: '',
+        email: '',
+        phone: '',
+        address: '',
+        order_number: '',
+        neighborhood: '',
+        additionalInfo: ''
+      });
+    // Fechar modal e limpar carrinho após pagamento
+    useEffect(() => {
+      if (paymentSuccess) {
+        // Fecha modal, limpa carrinho e mostra mensagem de sucesso
+        setShowOrderConfirmationModal(false);
+        clearCart();
+        setPixQrCodeBase64(null);
+        setPixCopiaECola(null);
+        toast.success('Pagamento efetuado com sucesso! Aguarde, em instantes confirmaremos a entrega no seu WhatsApp.', { duration: 8000 });
+      }
+    }, [paymentSuccess]);
+
+    // A conexão SSE será controlada pelo RealTimeProvider (autoConnect)
+
+    // Atualiza status do pedido ao receber evento SSE
+    const handleOrderStatusUpdate = (data: { order_id: string; status: string }) => {
+      if (data.order_id && Number(data.order_id) === customerData.id && (data.status === 'confirmed' || data.status === 'paid') && !paymentSuccess) {
+        console.log('[Checkout] Status de pagamento confirmado recebido via SSE!', data);
+        setOrderStatus('confirmed');
+        setPaymentSuccess(true);
+      }
+    };
   const navigate = useNavigate();
   const { cart, clearCart, refreshProducts, getAvailableStock } = useApp();
   const hasOutOfStock = cart.some(item => {
@@ -43,17 +79,11 @@ export const Checkout = () => {
   const [foundCustomerData, setFoundCustomerData] = useState<any>(null);
   const [isConfirmCustomerModalOpen, setIsConfirmCustomerModalOpen] = useState(false);
   const [isRefreshingStock, setIsRefreshingStock] = useState(false);
+  // ...existing code...
 
-  const [customerData, setCustomerData] = useState<CustomerData>({
-    id: 0,  
-    name: '',
-    email: '',
-    phone: '',
-    address: '',
-    order_number: '',
-    neighborhood: '',
-    additionalInfo: ''
-  });
+  // Passa o callback para o RealTimeProvider
+  // Se estiver usando o RealTimeProvider no App, ajuste para:
+  // <RealTimeProvider onOrderStatusUpdate={handleOrderStatusUpdate}>
 
   // Estado para modal de confirmação do pedido
   const [showOrderConfirmationModal, setShowOrderConfirmationModal] = useState(false);
@@ -73,10 +103,15 @@ export const Checkout = () => {
   // Redirecionar para o cardápio se o carrinho expirar ou ficar vazio
   useEffect(() => {
     if (cart.length === 0) {
-      toast.error('Seu carrinho expirou ou ficou vazio. Redirecionando para o cardápio...');
-      navigate('/');
+      if (!paymentSuccess) {
+        toast.error('Seu carrinho expirou ou ficou vazio. Redirecionando para o cardápio...');
+        navigate('/');
+      } else {
+        // Se pagamento foi feito, não mostrar mensagem de expiração
+        // Apenas limpar o carrinho e manter o fluxo de sucesso
+      }
     }
-  }, [cart.length, navigate]);
+  }, [cart.length, navigate, paymentSuccess]);
 
   // Função para criar pedido
   const createOrder = async (customerData: CustomerData, cart: any[], total: number) => {
@@ -128,6 +163,7 @@ export const Checkout = () => {
       setPixQrCodeUrl(response?.pix_qr_code_url || null);
       setPixCopiaECola(response?.pix_copia_e_cola || null);
       setPixQrCodeError(response?.error || null);
+        setOrderStatus(response?.order?.status || 'pending_payment');
       // Iniciar timer de expiração do checkout
       if (response?.id) {
         startCheckoutExpiration(response.id.toString(), sessionId);
@@ -360,7 +396,20 @@ export const Checkout = () => {
   return (
     <div className="checkout-container">
       {/* Botão de confirmação do pedido (modal) */}
-      <Dialog open={showOrderConfirmationModal}>
+      <Dialog open={showOrderConfirmationModal} onOpenChange={setShowOrderConfirmationModal}>
+        {paymentSuccess ? (
+          <DialogHeader>
+            <DialogTitle>
+              <span className="inline-flex items-center gap-2 text-green-700 text-lg font-semibold">
+                <svg width="28" height="28" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="#16a34a"/><path d="M8 12.5l2.5 2.5 5-5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                Pagamento efetuado com sucesso!
+              </span>
+            </DialogTitle>
+            <DialogDescription>
+              Aguarde, em instantes confirmaremos a entrega no seu WhatsApp.
+            </DialogDescription>
+          </DialogHeader>
+        ) : null}
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Pedido realizado com sucesso!</DialogTitle>

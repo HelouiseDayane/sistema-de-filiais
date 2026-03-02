@@ -28,9 +28,10 @@ interface ProductStockModalProps {
   productName: string;
   userRole: string;
   userBranchId?: number;
+  refreshProducts: () => Promise<void>;
 }
 
-export function ProductStockModal({ open, onClose, productId, productName, userRole, userBranchId }: ProductStockModalProps) {
+export function ProductStockModal({ open, onClose, productId, productName, userRole, userBranchId, refreshProducts }: ProductStockModalProps) {
   const [stocks, setStocks] = useState<ProductStock[]>([]);
   const [loading, setLoading] = useState(false);
   const isMaster = userRole === 'master';
@@ -66,7 +67,6 @@ export function ProductStockModal({ open, onClose, productId, productName, userR
   const handleSave = async () => {
     try {
       setLoading(true);
-      
       // Se for master, atualizar todos de uma vez
       if (isMaster) {
         await adminApi.post(`/admin/products/${productId}/stocks/bulk`, {
@@ -81,9 +81,11 @@ export function ProductStockModal({ open, onClose, productId, productName, userR
           });
         }
       }
-      
       toast.success('Estoques atualizados com sucesso');
-      onClose();
+      await refreshProducts(); // Garante refresh imediato na tabela
+      setTimeout(() => {
+        onClose();
+      }, 100); // Pequeno delay para garantir renderização
     } catch (error: any) {
       console.error('Erro ao atualizar estoques:', error);
       toast.error(error.response?.data?.message || 'Erro ao atualizar estoques');

@@ -3321,3 +3321,23 @@
 2026-02-27 13:51:43,996 INFO spawned: 'vite' with pid 10
 2026-02-27 13:51:45,239 INFO success: nginx entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
 2026-02-27 13:51:45,240 INFO success: vite entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2026-03-02 02:39:08,377 WARN received SIGTERM indicating exit request
+2026-03-02 02:39:08,420 INFO waiting for nginx, vite to die
+2026-03-02 02:39:09,439 WARN stopped: vite (terminated by SIGTERM)
+2026-03-02 02:39:09,491 INFO stopped: nginx (exit status 0)
+2026-03-02 02:41:07,842 CRIT Supervisor is running as root.  Privileges were not dropped because no user is specified in the config file.  If you intend to run as root, you can set user=root in the config file to avoid this message.
+2026-03-02 02:41:07,848 INFO supervisord started with pid 1
+2026-03-02 02:41:08,854 INFO spawned: 'nginx' with pid 8
+2026-03-02 02:41:08,857 INFO spawned: 'vite' with pid 9
+2026-03-02 02:41:09,863 INFO success: nginx entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2026-03-02 02:41:09,864 INFO success: vite entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2026-03-02 11:44:12,802 WARN received SIGTERM indicating exit request
+2026-03-02 11:44:12,829 INFO waiting for nginx, vite to die
+2026-03-02 11:44:13,850 WARN stopped: vite (terminated by SIGTERM)
+2026-03-02 11:44:13,900 INFO stopped: nginx (exit status 0)
+2026-03-02 11:44:22,996 CRIT Supervisor is running as root.  Privileges were not dropped because no user is specified in the config file.  If you intend to run as root, you can set user=root in the config file to avoid this message.
+2026-03-02 11:44:23,000 INFO supervisord started with pid 1
+2026-03-02 11:44:24,006 INFO spawned: 'nginx' with pid 8
+2026-03-02 11:44:24,010 INFO spawned: 'vite' with pid 9
+2026-03-02 11:44:25,061 INFO success: nginx entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2026-03-02 11:44:25,061 INFO success: vite entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
