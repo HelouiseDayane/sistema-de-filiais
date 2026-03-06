@@ -11,7 +11,7 @@ use App\Http\Controllers\Admin\OrderAdminController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\BranchController;
 use App\Http\Controllers\Admin\UserController;
-use App\Http\Controllers\BranchPaymentController;
+use App\Http\Controllers\Admin\BranchPaymentController;
 use App\Http\Controllers\Admin\WhatsAppController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\Admin\MasterDashboardController;

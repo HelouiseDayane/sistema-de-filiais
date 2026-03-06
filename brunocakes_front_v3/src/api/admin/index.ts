@@ -8,6 +8,13 @@ import { adminApiRequest } from '../common/request';
 
 // API administrativa consolidada
 export const adminApi = {
+    patch: async (url: string, data?: any, options?: any) => {
+      return adminApiRequest(url, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+        ...options
+      });
+    },
   // === AUTENTICAÇÃO ===
   ...authApi,
 

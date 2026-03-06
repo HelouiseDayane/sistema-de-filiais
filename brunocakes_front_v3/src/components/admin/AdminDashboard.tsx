@@ -106,7 +106,8 @@ export function AdminDashboard() {
   const thisMonthSales = Number(analytics.sales_month ?? 0);
   const thisYearSales = Number(analytics.sales_year ?? 0);
   const totalRevenue = Number(analytics.total_revenue ?? 0);
-  const pendingOrders = Number(analytics.ticket_statistics?.awaiting_confirmation ?? 0);
+  // Corrigir: pedidos pendentes devem usar o campo correto do backend
+  const pendingOrders = Number(analytics.ticket_statistics?.pending_payment ?? 0);
   const totalProducts = Number(analytics.product_metrics?.total_products ?? 0);
   const availableProducts = Number(analytics.product_metrics?.available_products ?? 0);
   const lowStockProducts = Number(analytics.product_metrics?.low_stock_products ?? 0);
@@ -301,7 +302,11 @@ export function AdminDashboard() {
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
                   <Pie
-                    data={analytics.neighborhoodsSales}
+                    data={analytics.neighborhoodsSales.map(n => ({
+                      ...n,
+                      revenue: Number(n.revenue),
+                      sales: Number(n.sales)
+                    }))}
                     cx="50%"
                     cy="50%"
                     labelLine={false}

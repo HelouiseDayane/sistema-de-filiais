@@ -39,6 +39,19 @@ RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cac
 # Copia configuração customizada do PHP
 COPY php.ini /usr/local/etc/php/conf.d/custom.ini
 
+# Copia configuração customizada do PHP-FPM (arquivo está em ../docker/php-fpm.conf)
+# Não é possível copiar fora do build context, então vamos criar inline
+RUN mkdir -p /usr/local/etc/php-fpm.d && \
+    echo '[global]' > /usr/local/etc/php-fpm.d/99-custom.conf && \
+    echo 'daemonize = no' >> /usr/local/etc/php-fpm.d/99-custom.conf && \
+    echo '[www]' >> /usr/local/etc/php-fpm.d/99-custom.conf && \
+    echo 'pm = dynamic' >> /usr/local/etc/php-fpm.d/99-custom.conf && \
+    echo 'pm.max_children = 20' >> /usr/local/etc/php-fpm.d/99-custom.conf && \
+    echo 'pm.start_servers = 5' >> /usr/local/etc/php-fpm.d/99-custom.conf && \
+    echo 'pm.min_spare_servers = 3' >> /usr/local/etc/php-fpm.d/99-custom.conf && \
+    echo 'pm.max_spare_servers = 10' >> /usr/local/etc/php-fpm.d/99-custom.conf && \
+    echo 'pm.max_requests = 1000' >> /usr/local/etc/php-fpm.d/99-custom.conf
+
 # Copia a configuração do nginx
 COPY default.conf /etc/nginx/sites-available/default
 RUN rm -f /etc/nginx/sites-enabled/default && \

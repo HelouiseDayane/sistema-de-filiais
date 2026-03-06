@@ -106,8 +106,9 @@ class DashboardController extends Controller
     // Considera apenas pedidos não cancelados e pagamento confirmado ou pago
     $validOrderStatus = ['confirmed', 'completed', 'delivered'];
 
-    // Aplicar filtro de filial em todas as queries de Orders
-    $salesByDay = Order::whereDate('created_at', $today)
+
+    // KPIs agregados
+    $salesByDayKpi = Order::whereDate('created_at', $today)
         ->whereIn('status', $validOrderStatus)
         ->when($branchId, fn($q) => $q->where('branch_id', $branchId))
         ->sum('total_amount');
@@ -117,7 +118,7 @@ class DashboardController extends Controller
         ->when($branchId, fn($q) => $q->where('branch_id', $branchId))
         ->count();
 
-    $salesByMonth = Order::whereMonth('created_at', now()->month)
+    $salesByMonthKpi = Order::whereMonth('created_at', now()->month)
         ->whereIn('status', $validOrderStatus)
         ->when($branchId, fn($q) => $q->where('branch_id', $branchId))
         ->sum('total_amount');
@@ -131,6 +132,23 @@ class DashboardController extends Controller
         ->whereIn('status', $validOrderStatus)
         ->when($branchId, fn($q) => $q->where('branch_id', $branchId))
         ->sum('total_amount');
+
+    // Arrays históricos para gráficos
+    $salesByDay = Order::selectRaw('DATE(created_at) as date, SUM(total_amount) as amount')
+        ->whereIn('status', $validOrderStatus)
+        ->when($branchId, fn($q) => $q->where('branch_id', $branchId))
+        ->where('created_at', '>=', now()->subDays(7))
+        ->groupBy('date')
+        ->orderBy('date')
+        ->get();
+
+    $salesByMonth = Order::selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month, SUM(total_amount) as amount')
+        ->whereIn('status', $validOrderStatus)
+        ->when($branchId, fn($q) => $q->where('branch_id', $branchId))
+        ->where('created_at', '>=', now()->subMonths(6))
+        ->groupBy('month')
+        ->orderBy('month')
+        ->get();
 
     // ✅ Top produtos (somente confirmados ou pagos)
     $topProductWeek = OrderItem::select('product_name', DB::raw('SUM(quantity) as qty'))
@@ -236,14 +254,16 @@ class DashboardController extends Controller
     }
 
     return response()->json([
-        'sales_today' => $salesByDay,
+        'sales_today' => $salesByDayKpi,
         'orders_today' => $ordersByDay,
-        'sales_month' => $salesByMonth,
+        'sales_month' => $salesByMonthKpi,
         'orders_month' => $ordersByMonth,
         'sales_year' => $salesByYear,
-        'top_product_week' => $topProductWeek,
-        'top_products_month' => $topProductsMonth,
-        'neighborhoods_sales' => $neighborhoodsSales,
+        'salesByDay' => $salesByDay,
+        'salesByMonth' => $salesByMonth,
+        'topProductWeek' => $topProductWeek,
+        'topProductsMonth' => $topProductsMonth,
+        'neighborhoodsSales' => $neighborhoodsSales,
         'total_revenue' => $totalRevenue,
         'ticket_statistics' => $ticketStats,
         'engagement' => [

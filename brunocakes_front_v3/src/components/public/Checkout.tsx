@@ -42,14 +42,10 @@ export const Checkout = () => {
         neighborhood: '',
         additionalInfo: ''
       });
-    // Fechar modal e limpar carrinho após pagamento
+    // Apenas exibe toast quando paymentSuccess muda para true
     useEffect(() => {
       if (paymentSuccess) {
-        console.log('[Checkout] paymentSuccess TRUE, executando limpeza e fechamento do modal');
-        setShowOrderConfirmationModal(false);
-        clearCart();
-        setPixQrCodeBase64(null);
-        setPixCopiaECola(null);
+        console.log('[Checkout] paymentSuccess TRUE, aguardando ação do usuário no modal');
         toast.success('Pagamento efetuado com sucesso! Aguarde, em instantes confirmaremos a entrega no seu WhatsApp.', { duration: 8000 });
       } else {
         console.log('[Checkout] paymentSuccess FALSE, aguardando confirmação de pagamento...');
@@ -321,8 +317,7 @@ export const Checkout = () => {
       // Formatar telefone com máscara antes de setar
       const phoneNumber = foundCustomerData.customer_phone || '';
       const formattedPhone = formatPhoneInput(phoneNumber);
-      
-      // Preenche os dados do formulário
+      // Preenche os dados do formulário, mantendo bairro se já existir
       setCustomerData((prev: CustomerData) => {
         const newData = {
           ...prev,
@@ -332,17 +327,14 @@ export const Checkout = () => {
           address: foundCustomerData.address_street 
             ? `${foundCustomerData.address_street}${foundCustomerData.address_number ? ', ' + foundCustomerData.address_number : ''}`
             : '',
-          neighborhood: foundCustomerData.address_neighborhood || ''
+          neighborhood: foundCustomerData.address_neighborhood || prev.neighborhood || ''
         };
-        
         return newData;
       });
-      
       toast.success('✅ Dados do cliente preenchidos com sucesso! Verifique os campos abaixo.');
       setIsConfirmCustomerModalOpen(false);
       setFoundCustomerData(null);
       setCustomerContact('');
-      // Resetar para telefone sempre, já que só suportamos telefone
     }
   };
 
@@ -419,7 +411,16 @@ export const Checkout = () => {
   return (
     <div className="checkout-container">
       {/* Botão de confirmação do pedido (modal) */}
-      <Dialog open={showOrderConfirmationModal} onOpenChange={setShowOrderConfirmationModal}>
+      <Dialog 
+        open={showOrderConfirmationModal} 
+        onOpenChange={(isOpen) => {
+          setShowOrderConfirmationModal(isOpen);
+          // Se o modal foi fechado e o pagamento não foi realizado, limpar o carrinho
+          if (!isOpen && !paymentSuccess) {
+            clearCart();
+          }
+        }}
+      >
         {paymentSuccess ? (
           <DialogHeader>
             <DialogTitle>
@@ -513,12 +514,13 @@ export const Checkout = () => {
             <Button
               className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white text-lg px-8 py-3"
               onClick={() => {
-                setShowOrderConfirmationModal(false);
+                // Limpa o carrinho imediatamente ao fechar o modal
                 clearCart();
+                setShowOrderConfirmationModal(false);
                 setPixQrCodeBase64(null);
                 setPixCopiaECola(null);
+                // Redireciona para a tela de acompanhamento de pedidos do cliente
                 if (customerData.phone) {
-                  // Enviar telefone com máscara para tracking
                   navigate(`/tracking?phone=${encodeURIComponent(customerData.phone)}`);
                 } else {
                   navigate('/tracking');

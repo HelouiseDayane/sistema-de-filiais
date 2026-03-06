@@ -169,20 +169,21 @@ const PublicMenu = () => {
 
   // Efeito para buscar produtos (inicial e em atualização de estoque)
   useEffect(() => {
-  const fetchProducts = async () => {
-    try {
-      const branchId = selectedBranch?.id;
-      const res = await apiRequest(`/products/with-stock?branch_id=${branchId}&page=${pagina}&per_page=20`);
-      setPublicProducts(res.data); // res.data.data são os produtos
-      setTotalPaginas(res.last_page);
-    } catch (error) {
-      console.error('Erro ao buscar produtos (with-stock):', error);
+    const fetchProducts = async () => {
+      try {
+        const branchId = selectedBranch?.id;
+        const res = await apiRequest(`/products/with-stock?branch_id=${branchId}&page=${pagina}&per_page=20`);
+        setPublicProducts(res.data); // res.data.data são os produtos
+        setTotalPaginas(res.last_page);
+      } catch (error) {
+        console.error('Erro ao buscar produtos (with-stock):', error);
+        toast.error('Erro ao carregar produtos. Verifique sua conexão ou tente novamente.');
+      }
+    };
+    if (selectedBranch) {
+      fetchProducts();
     }
-  };
-  if (selectedBranch) {
-    fetchProducts();
-  }
-}, [selectedBranch, pagina]);
+  }, [selectedBranch, pagina]);
 
   // Efeito para buscar dados da filial selecionada (endereço, horário, checkout)
   useEffect(() => {
@@ -418,6 +419,7 @@ const Paginacao = () => (
         <div className="text-center">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-orange-500 mx-auto"></div>
           <p className="mt-4 text-gray-600">Carregando produtos...</p>
+          <Button className="mt-4" onClick={() => window.location.reload()}>Tentar novamente</Button>
         </div>
       </div>
     );

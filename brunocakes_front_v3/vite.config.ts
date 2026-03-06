@@ -65,7 +65,7 @@
       ],
       proxy: {
         '/api': {
-          target: 'http://backend:80',
+          target: 'http://backend_filial:80',
           changeOrigin: true,
           secure: false,
         }

@@ -40,6 +40,7 @@ export function BranchSelectionModal({
   const [branches, setBranches] = useState<BranchWithAddress[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedBranch, setSelectedBranch] = useState<BranchWithAddress | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // Log para debug
   //console.log('🎭 BranchSelectionModal renderizado:', { open, allowClose, branches: branches.length });
@@ -48,35 +49,47 @@ export function BranchSelectionModal({
     if (open) {
       console.log('🎭 Modal aberto, buscando filiais...');
       setSelectedBranch(null);
-      fetchBranches();
+      setLoadError(null);
+      fetchBranchesWithTimeout();
     }
   }, [open]);
 
-  const fetchBranches = async () => {
+  // Timeout manual para evitar loading infinito
+  const fetchBranchesWithTimeout = () => {
     setLoading(true);
+    setLoadError(null);
+    let didTimeout = false;
+    const timeout = setTimeout(() => {
+      didTimeout = true;
+      setLoading(false);
+      setLoadError('Tempo esgotado ao buscar filiais. Verifique sua conexão e tente novamente.');
+    }, 10000); // 10 segundos
+    fetchBranches()
+      .then(() => {
+        if (!didTimeout) clearTimeout(timeout);
+      })
+      .catch(() => {
+        if (!didTimeout) clearTimeout(timeout);
+      });
+  };
+
+  const fetchBranches = async () => {
     try {
+      setLoadError(null);
       console.log('🔍 Buscando filiais e endereços...');
-      // Buscar filiais
       const branchesResponse = await apiRequest('/branches');
       const branchList = Array.isArray(branchesResponse)
         ? branchesResponse
         : (branchesResponse?.data ?? []);
-
-      // Buscar endereços ativos com status
       const addressesResponse = await apiRequest('/addresses/active');
       const addressList = Array.isArray(addressesResponse) 
         ? addressesResponse 
         : (addressesResponse?.data ?? []);
-
-      // Se não houver branches, não mostrar erro - pode estar carregando
       if (!branchList || branchList.length === 0) {
-        console.log('⚠️ Nenhuma filial encontrada');
         setBranches([]);
-        setLoading(false);
+        setLoadError('Nenhuma filial disponível no momento.');
         return;
       }
-
-      // Combinar filiais com endereços
       const merged: BranchWithAddress[] = branchList.map((branch: Branch) => {
         const address = addressList.find((a: any) => a.branch_id === branch.id);
         return {
@@ -97,21 +110,11 @@ export function BranchSelectionModal({
             : undefined
         };
       });
-
-      // Debug: log das listas e do merge para inspecionar no console do navegador
-      try {
-        console.log('🔎 branchList (fetched):', branchList);
-        console.log('🔎 addressList (fetched):', addressList);
-        console.log('🔎 merged branches with addresses:', merged);
-      } catch (e) {
-        // ignore
-      }
-
       setBranches(merged);
     } catch (error: any) {
-      // Log silencioso - não mostrar toast de erro para não assustar o usuário
-      console.log('ℹ️ Problema ao carregar filiais (pode ser OPTIONS ou rede):', error?.message || error);
       setBranches([]);
+      setLoadError('Erro ao carregar filiais. Verifique sua conexão ou tente novamente.');
+      toast.error('Erro ao carregar filiais. Verifique sua conexão ou tente novamente.');
     } finally {
       setLoading(false);
     }
@@ -138,20 +141,19 @@ export function BranchSelectionModal({
     <Dialog
       open={open}
       onOpenChange={(isOpen) => {
-        // Só permite fechar se allowClose for true OU selectedBranch for válido
-        if (!isOpen && !(allowClose || selectedBranch)) {
-          return;
+        // Permite fechar/cancelar o modal a qualquer momento
+        if (!isOpen) {
+          setLoadError(null);
+          setBranches([]);
+          setSelectedBranch(null);
         }
       }}
     >
       <DialogContent
         className="max-w-4xl max-h-[90vh] overflow-y-auto"
-        onInteractOutside={(e) => {
-          if (!(allowClose || selectedBranch)) e.preventDefault();
-        }}
-        onEscapeKeyDown={(e) => {
-          if (!(allowClose || selectedBranch)) e.preventDefault();
-        }}
+        // Permite fechar o modal mesmo durante loading ou erro
+        onInteractOutside={() => {}}
+        onEscapeKeyDown={() => {}}
       >
         <DialogHeader>
           <DialogTitle className="text-2xl text-center">
@@ -168,10 +170,15 @@ export function BranchSelectionModal({
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
               <p className="text-muted-foreground">Carregando filiais...</p>
             </div>
+          ) : loadError ? (
+            <div className="text-center py-12">
+              <p className="text-red-600 mb-4 font-medium">{loadError}</p>
+              <Button onClick={fetchBranchesWithTimeout}>Tentar novamente</Button>
+            </div>
           ) : branches.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-muted-foreground mb-4">Nenhuma filial disponível no momento.</p>
-              <Button onClick={fetchBranches}>Tentar novamente</Button>
+              <Button onClick={fetchBranchesWithTimeout}>Tentar novamente</Button>
             </div>
           ) : (
             <>

@@ -15,19 +15,20 @@ export function PublicBranchSelector({ selectedBranch, onBranchSelect }: PublicB
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
 
+
   useEffect(() => {
     fetchBranches();
   }, []);
 
   const fetchBranches = async () => {
+    setLoading(true);
     try {
-      // Usa a função genérica de requisição pública
       const data = await apiRequest('/branches', { method: 'GET', headers: { Accept: 'application/json' } });
-      // apiRequest retorna o body já parseado
       setBranches(Array.isArray(data) ? data : (data?.data || []));
     } catch (error: any) {
-      // Log silencioso - não mostrar toast de erro, mas registrar
       console.log('ℹ️ Problema ao carregar filiais:', error?.message || error);
+      // Mostra toast de erro para o usuário
+      toast.error('Erro ao carregar filiais. Verifique sua conexão ou tente novamente.');
     } finally {
       setLoading(false);
     }
@@ -37,10 +38,11 @@ export function PublicBranchSelector({ selectedBranch, onBranchSelect }: PublicB
     return <div className="text-center py-8">Carregando filiais...</div>;
   }
 
-  if (branches.length === 0) {
+  if (!loading && branches.length === 0) {
     return (
       <div className="text-center py-8">
-        <p className="text-muted-foreground">Nenhuma filial disponível no momento.</p>
+        <p className="text-muted-foreground mb-4">Nenhuma filial disponível no momento.</p>
+        <Button onClick={fetchBranches}>Tentar novamente</Button>
       </div>
     );
   }

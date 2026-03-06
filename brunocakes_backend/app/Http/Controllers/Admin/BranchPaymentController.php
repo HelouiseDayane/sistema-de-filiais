@@ -26,6 +26,20 @@ class BranchPaymentController extends Controller
             ->orderBy('period_end', 'desc')
             ->get();
 
+        foreach ($payments as $payment) {
+            $ordersCount = Order::where('branch_id', $payment->branch_id)
+                ->whereIn('status', ['confirmed', 'completed', 'delivered'])
+                ->count();
+            $totalSales = Order::where('branch_id', $payment->branch_id)
+                ->whereIn('status', ['confirmed', 'completed', 'delivered'])
+                ->sum('total_amount');
+            \Log::info('DEBUG PAGAMENTOS INDEX', [
+                'branch_id' => $payment->branch_id,
+                'total_sales' => $totalSales,
+                'orders_count' => $ordersCount,
+            ]);
+        }
+
         return response()->json($payments);
     }
 
@@ -63,23 +77,27 @@ class BranchPaymentController extends Controller
 
             // Calcular total de vendas no período
             $totalSales = Order::where('branch_id', $branch->id)
-                ->where('status', 'completed')
-                ->whereBetween('created_at', [$periodStart, $periodEnd])
-                ->sum('total');
+                ->whereIn('status', ['confirmed', 'completed', 'delivered'])
+                ->sum('total_amount');
 
             if ($totalSales > 0) {
                 $profitPercentage = $branch->profit_percentage ?? 100;
                 $commissionAmount = ($totalSales * $profitPercentage) / 100;
 
-                $payment = BranchPayment::create([
-                    'branch_id' => $branch->id,
-                    'period_start' => $periodStart,
-                    'period_end' => $periodEnd,
-                    'total_sales' => $totalSales,
-                    'profit_percentage' => $profitPercentage,
-                    'commission_amount' => $commissionAmount,
-                    'status' => 'pendente',
-                ]);
+                // Atualiza ou cria registro de pagamento do período
+                $payment = BranchPayment::updateOrCreate(
+                    [
+                        'branch_id' => $branch->id,
+                        'period_start' => $periodStart,
+                        'period_end' => $periodEnd,
+                    ],
+                    [
+                        'total_sales' => $totalSales,
+                        'profit_percentage' => $profitPercentage,
+                        'commission_amount' => $commissionAmount,
+                        'status' => 'pendente',
+                    ]
+                );
 
                 $createdPayments[] = $payment;
             }
@@ -139,8 +157,14 @@ class BranchPaymentController extends Controller
         foreach ($branches as $branch) {
             // Vendas totais
             $totalSales = Order::where('branch_id', $branch->id)
-                ->where('status', 'completed')
-                ->sum('total');
+                ->whereRaw('LOWER(status) = ?', ['completed'])
+                ->sum('total_amount');
+
+            \Log::info('[DASHBOARD_DEBUG]', [
+                'branch_id' => $branch->id,
+                'branch_name' => $branch->name,
+                'total_sales' => $totalSales,
+            ]);
 
             // Pagamentos pendentes
             $pendingPayments = BranchPayment::where('branch_id', $branch->id)

@@ -3341,3 +3341,167 @@
 2026-03-02 11:44:24,010 INFO spawned: 'vite' with pid 9
 2026-03-02 11:44:25,061 INFO success: nginx entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
 2026-03-02 11:44:25,061 INFO success: vite entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2026-03-02 21:41:41,214 WARN received SIGTERM indicating exit request
+2026-03-02 21:41:41,371 INFO waiting for nginx, vite to die
+2026-03-02 21:41:42,389 WARN stopped: vite (terminated by SIGTERM)
+2026-03-02 21:41:42,471 INFO stopped: nginx (exit status 0)
+2026-03-02 21:41:44,053 CRIT Supervisor is running as root.  Privileges were not dropped because no user is specified in the config file.  If you intend to run as root, you can set user=root in the config file to avoid this message.
+2026-03-02 21:41:44,059 INFO supervisord started with pid 1
+2026-03-02 21:41:45,062 INFO spawned: 'nginx' with pid 8
+2026-03-02 21:41:45,076 INFO spawned: 'vite' with pid 9
+2026-03-02 21:41:46,156 INFO success: nginx entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2026-03-02 21:41:46,162 INFO success: vite entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2026-03-02 21:42:25,465 WARN received SIGTERM indicating exit request
+2026-03-02 21:42:25,472 INFO waiting for nginx, vite to die
+2026-03-02 21:42:26,475 WARN stopped: vite (terminated by SIGTERM)
+2026-03-02 21:42:26,485 INFO stopped: nginx (exit status 0)
+2026-03-02 21:44:14,824 CRIT Supervisor is running as root.  Privileges were not dropped because no user is specified in the config file.  If you intend to run as root, you can set user=root in the config file to avoid this message.
+2026-03-02 21:44:14,834 INFO supervisord started with pid 1
+2026-03-02 21:44:15,841 INFO spawned: 'nginx' with pid 8
+2026-03-02 21:44:15,847 INFO spawned: 'vite' with pid 9
+2026-03-02 21:44:16,904 INFO success: nginx entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2026-03-02 21:44:16,904 INFO success: vite entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2026-03-02 21:54:26,329 WARN received SIGTERM indicating exit request
+2026-03-02 21:54:26,363 INFO waiting for nginx, vite to die
+2026-03-02 21:54:27,384 WARN stopped: vite (terminated by SIGTERM)
+2026-03-02 21:54:27,440 INFO stopped: nginx (exit status 0)
+2026-03-02 21:59:45,929 CRIT Supervisor is running as root.  Privileges were not dropped because no user is specified in the config file.  If you intend to run as root, you can set user=root in the config file to avoid this message.
+2026-03-02 21:59:45,938 INFO supervisord started with pid 1
+2026-03-02 21:59:46,943 INFO spawned: 'nginx' with pid 8
+2026-03-02 21:59:46,946 INFO spawned: 'vite' with pid 9
+2026-03-02 21:59:46,977 WARN exited: nginx (exit status 1; not expected)
+2026-03-02 21:59:47,982 INFO spawned: 'nginx' with pid 38
+2026-03-02 21:59:47,983 INFO success: vite entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2026-03-02 21:59:47,995 WARN exited: nginx (exit status 1; not expected)
+2026-03-02 21:59:50,037 INFO spawned: 'nginx' with pid 39
+2026-03-02 21:59:50,048 WARN exited: nginx (exit status 1; not expected)
+2026-03-02 21:59:53,053 INFO spawned: 'nginx' with pid 40
+2026-03-02 21:59:53,066 WARN exited: nginx (exit status 1; not expected)
+2026-03-02 21:59:54,068 INFO gave up: nginx entered FATAL state, too many start retries too quickly
+2026-03-02 22:04:27,354 WARN received SIGTERM indicating exit request
+2026-03-02 22:04:27,364 INFO waiting for vite to die
+2026-03-02 22:04:28,373 WARN stopped: vite (terminated by SIGTERM)
+2026-03-02 22:06:22,330 CRIT Supervisor is running as root.  Privileges were not dropped because no user is specified in the config file.  If you intend to run as root, you can set user=root in the config file to avoid this message.
+2026-03-02 22:06:22,338 INFO supervisord started with pid 1
+2026-03-02 22:06:23,343 INFO spawned: 'nginx' with pid 8
+2026-03-02 22:06:23,346 INFO spawned: 'vite' with pid 9
+2026-03-02 22:06:23,380 WARN exited: nginx (exit status 1; not expected)
+2026-03-02 22:06:24,383 INFO spawned: 'nginx' with pid 32
+2026-03-02 22:06:24,384 INFO success: vite entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2026-03-02 22:06:24,395 WARN exited: nginx (exit status 1; not expected)
+2026-03-02 22:06:26,666 INFO spawned: 'nginx' with pid 40
+2026-03-02 22:06:26,677 WARN exited: nginx (exit status 1; not expected)
+2026-03-02 22:06:29,681 INFO spawned: 'nginx' with pid 41
+2026-03-02 22:06:29,692 WARN exited: nginx (exit status 1; not expected)
+2026-03-02 22:06:30,694 INFO gave up: nginx entered FATAL state, too many start retries too quickly
+2026-03-02 22:09:40,885 WARN received SIGTERM indicating exit request
+2026-03-02 22:09:40,889 INFO waiting for vite to die
+2026-03-02 22:09:41,891 WARN stopped: vite (terminated by SIGTERM)
+2026-03-02 22:11:55,801 CRIT Supervisor is running as root.  Privileges were not dropped because no user is specified in the config file.  If you intend to run as root, you can set user=root in the config file to avoid this message.
+2026-03-02 22:11:55,809 INFO supervisord started with pid 1
+2026-03-02 22:11:56,815 INFO spawned: 'nginx' with pid 7
+2026-03-02 22:11:56,818 INFO spawned: 'vite' with pid 8
+2026-03-02 22:11:56,846 WARN exited: nginx (exit status 1; not expected)
+2026-03-02 22:11:57,849 INFO spawned: 'nginx' with pid 31
+2026-03-02 22:11:57,850 INFO success: vite entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2026-03-02 22:11:57,864 WARN exited: nginx (exit status 1; not expected)
+2026-03-02 22:12:00,050 INFO spawned: 'nginx' with pid 38
+2026-03-02 22:12:00,061 WARN exited: nginx (exit status 1; not expected)
+2026-03-02 22:12:03,066 INFO spawned: 'nginx' with pid 39
+2026-03-02 22:12:03,086 WARN exited: nginx (exit status 1; not expected)
+2026-03-02 22:12:04,087 INFO gave up: nginx entered FATAL state, too many start retries too quickly
+2026-03-02 22:29:40,173 WARN received SIGTERM indicating exit request
+2026-03-02 22:29:40,181 INFO waiting for vite to die
+2026-03-02 22:29:41,216 WARN stopped: vite (terminated by SIGTERM)
+2026-03-02 22:29:42,195 CRIT Supervisor is running as root.  Privileges were not dropped because no user is specified in the config file.  If you intend to run as root, you can set user=root in the config file to avoid this message.
+2026-03-02 22:29:42,199 INFO supervisord started with pid 1
+2026-03-02 22:29:43,202 INFO spawned: 'nginx' with pid 8
+2026-03-02 22:29:43,205 INFO spawned: 'vite' with pid 9
+2026-03-02 22:29:43,224 WARN exited: nginx (exit status 1; not expected)
+2026-03-02 22:29:44,241 INFO spawned: 'nginx' with pid 32
+2026-03-02 22:29:44,243 INFO success: vite entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2026-03-02 22:29:44,343 WARN exited: nginx (exit status 1; not expected)
+2026-03-02 22:29:46,589 INFO spawned: 'nginx' with pid 39
+2026-03-02 22:29:46,617 WARN exited: nginx (exit status 1; not expected)
+2026-03-02 22:29:49,622 INFO spawned: 'nginx' with pid 40
+2026-03-02 22:29:49,633 WARN exited: nginx (exit status 1; not expected)
+2026-03-02 22:29:50,635 INFO gave up: nginx entered FATAL state, too many start retries too quickly
+2026-03-02 22:34:22,019 WARN received SIGTERM indicating exit request
+2026-03-02 22:34:22,065 INFO waiting for vite to die
+2026-03-02 22:34:23,085 WARN stopped: vite (terminated by SIGTERM)
+2026-03-02 22:34:24,943 CRIT Supervisor is running as root.  Privileges were not dropped because no user is specified in the config file.  If you intend to run as root, you can set user=root in the config file to avoid this message.
+2026-03-02 22:34:24,947 INFO supervisord started with pid 1
+2026-03-02 22:34:25,949 INFO spawned: 'nginx' with pid 14
+2026-03-02 22:34:25,953 INFO spawned: 'vite' with pid 15
+2026-03-02 22:34:26,969 INFO success: nginx entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2026-03-02 22:34:26,969 INFO success: vite entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2026-03-03 03:34:49,747 WARN received SIGTERM indicating exit request
+2026-03-03 03:34:49,752 INFO waiting for nginx, vite to die
+2026-03-03 03:34:50,755 WARN stopped: vite (terminated by SIGTERM)
+2026-03-03 03:34:50,762 INFO stopped: nginx (exit status 0)
+2026-03-03 05:04:59,895 CRIT Supervisor is running as root.  Privileges were not dropped because no user is specified in the config file.  If you intend to run as root, you can set user=root in the config file to avoid this message.
+2026-03-03 05:04:59,908 INFO supervisord started with pid 1
+2026-03-03 05:05:00,918 INFO spawned: 'nginx' with pid 8
+2026-03-03 05:05:00,924 INFO spawned: 'vite' with pid 9
+2026-03-03 05:05:02,089 INFO success: nginx entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2026-03-03 05:05:02,090 INFO success: vite entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2026-03-06 21:51:51,730 WARN received SIGTERM indicating exit request
+2026-03-06 21:51:51,777 INFO waiting for nginx, vite to die
+2026-03-06 21:51:52,793 WARN stopped: vite (terminated by SIGTERM)
+2026-03-06 21:51:52,832 INFO stopped: nginx (exit status 0)
+2026-03-06 21:57:35,473 CRIT Supervisor is running as root.  Privileges were not dropped because no user is specified in the config file.  If you intend to run as root, you can set user=root in the config file to avoid this message.
+2026-03-06 21:57:35,479 INFO supervisord started with pid 1
+2026-03-06 21:57:36,488 INFO spawned: 'nginx' with pid 9
+2026-03-06 21:57:36,491 INFO spawned: 'vite' with pid 10
+2026-03-06 21:57:37,577 INFO success: nginx entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2026-03-06 21:57:37,577 INFO success: vite entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2026-03-06 22:01:21,578 WARN received SIGTERM indicating exit request
+2026-03-06 22:01:21,581 INFO waiting for nginx, vite to die
+2026-03-06 22:01:22,587 WARN stopped: vite (terminated by SIGTERM)
+2026-03-06 22:01:22,594 INFO stopped: nginx (exit status 0)
+2026-03-06 22:01:23,289 CRIT Supervisor is running as root.  Privileges were not dropped because no user is specified in the config file.  If you intend to run as root, you can set user=root in the config file to avoid this message.
+2026-03-06 22:01:23,292 INFO supervisord started with pid 1
+2026-03-06 22:01:24,295 INFO spawned: 'nginx' with pid 8
+2026-03-06 22:01:24,297 INFO spawned: 'vite' with pid 9
+2026-03-06 22:01:26,082 INFO success: nginx entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2026-03-06 22:01:26,082 INFO success: vite entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2026-03-06 22:01:51,518 WARN received SIGTERM indicating exit request
+2026-03-06 22:01:51,519 INFO waiting for nginx, vite to die
+2026-03-06 22:01:52,520 WARN stopped: vite (terminated by SIGTERM)
+2026-03-06 22:01:52,524 INFO stopped: nginx (exit status 0)
+2026-03-06 22:01:53,061 CRIT Supervisor is running as root.  Privileges were not dropped because no user is specified in the config file.  If you intend to run as root, you can set user=root in the config file to avoid this message.
+2026-03-06 22:01:53,064 INFO supervisord started with pid 1
+2026-03-06 22:01:54,066 INFO spawned: 'nginx' with pid 8
+2026-03-06 22:01:54,068 INFO spawned: 'vite' with pid 9
+2026-03-06 22:01:55,815 INFO success: nginx entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2026-03-06 22:01:55,815 INFO success: vite entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2026-03-06 22:09:30,308 WARN received SIGTERM indicating exit request
+2026-03-06 22:09:30,350 INFO waiting for nginx, vite to die
+2026-03-06 22:09:31,367 WARN stopped: vite (terminated by SIGTERM)
+2026-03-06 22:09:31,382 INFO stopped: nginx (exit status 0)
+2026-03-06 22:11:49,937 CRIT Supervisor is running as root.  Privileges were not dropped because no user is specified in the config file.  If you intend to run as root, you can set user=root in the config file to avoid this message.
+2026-03-06 22:11:49,943 INFO supervisord started with pid 1
+2026-03-06 22:11:50,949 INFO spawned: 'nginx' with pid 8
+2026-03-06 22:11:50,952 INFO spawned: 'vite' with pid 9
+2026-03-06 22:11:52,006 INFO success: nginx entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2026-03-06 22:11:52,006 INFO success: vite entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2026-03-06 22:14:27,439 WARN received SIGTERM indicating exit request
+2026-03-06 22:14:27,511 INFO waiting for nginx, vite to die
+2026-03-06 22:14:28,529 WARN stopped: vite (terminated by SIGTERM)
+2026-03-06 22:14:28,607 INFO stopped: nginx (exit status 0)
+2026-03-06 22:14:30,597 CRIT Supervisor is running as root.  Privileges were not dropped because no user is specified in the config file.  If you intend to run as root, you can set user=root in the config file to avoid this message.
+2026-03-06 22:14:30,601 INFO supervisord started with pid 1
+2026-03-06 22:14:31,606 INFO spawned: 'nginx' with pid 8
+2026-03-06 22:14:31,611 INFO spawned: 'vite' with pid 9
+2026-03-06 22:14:32,680 INFO success: nginx entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2026-03-06 22:14:32,681 INFO success: vite entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2026-03-06 22:19:04,177 WARN received SIGTERM indicating exit request
+2026-03-06 22:19:04,177 INFO waiting for nginx, vite to die
+2026-03-06 22:19:05,179 WARN stopped: vite (terminated by SIGTERM)
+2026-03-06 22:19:05,186 INFO stopped: nginx (exit status 0)
+2026-03-06 22:21:00,030 CRIT Supervisor is running as root.  Privileges were not dropped because no user is specified in the config file.  If you intend to run as root, you can set user=root in the config file to avoid this message.
+2026-03-06 22:21:00,039 INFO supervisord started with pid 1
+2026-03-06 22:21:01,044 INFO spawned: 'nginx' with pid 7
+2026-03-06 22:21:01,048 INFO spawned: 'vite' with pid 8
+2026-03-06 22:21:02,105 INFO success: nginx entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2026-03-06 22:21:02,105 INFO success: vite entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
