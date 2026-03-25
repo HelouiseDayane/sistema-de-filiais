@@ -155,9 +155,9 @@ class BranchPaymentController extends Controller
         $dashboard = [];
 
         foreach ($branches as $branch) {
-            // Vendas totais
+            // Vendas totais (confirmed, completed, delivered)
             $totalSales = Order::where('branch_id', $branch->id)
-                ->whereRaw('LOWER(status) = ?', ['completed'])
+                ->whereIn('status', ['confirmed', 'completed', 'delivered'])
                 ->sum('total_amount');
 
             \Log::info('[DASHBOARD_DEBUG]', [

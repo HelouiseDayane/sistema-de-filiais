@@ -46,10 +46,10 @@ RUN mkdir -p /usr/local/etc/php-fpm.d && \
     echo 'daemonize = no' >> /usr/local/etc/php-fpm.d/99-custom.conf && \
     echo '[www]' >> /usr/local/etc/php-fpm.d/99-custom.conf && \
     echo 'pm = dynamic' >> /usr/local/etc/php-fpm.d/99-custom.conf && \
-    echo 'pm.max_children = 20' >> /usr/local/etc/php-fpm.d/99-custom.conf && \
-    echo 'pm.start_servers = 5' >> /usr/local/etc/php-fpm.d/99-custom.conf && \
-    echo 'pm.min_spare_servers = 3' >> /usr/local/etc/php-fpm.d/99-custom.conf && \
-    echo 'pm.max_spare_servers = 10' >> /usr/local/etc/php-fpm.d/99-custom.conf && \
+    echo 'pm.max_children = 50' >> /usr/local/etc/php-fpm.d/99-custom.conf && \
+    echo 'pm.start_servers = 10' >> /usr/local/etc/php-fpm.d/99-custom.conf && \
+    echo 'pm.min_spare_servers = 5' >> /usr/local/etc/php-fpm.d/99-custom.conf && \
+    echo 'pm.max_spare_servers = 20' >> /usr/local/etc/php-fpm.d/99-custom.conf && \
     echo 'pm.max_requests = 1000' >> /usr/local/etc/php-fpm.d/99-custom.conf
 
 # Copia a configuração do nginx
